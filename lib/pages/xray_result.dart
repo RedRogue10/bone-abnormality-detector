@@ -118,7 +118,25 @@ class _XrayResultPageState extends State<XrayResultPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 5),
+                  Row(
+                    children: [
+                      Text(
+                        'Title of Xray',
+                        style: GoogleFonts.inter(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                      Spacer(),
+                      TextButton(onPressed: (){}, child: Text("EDIT",style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontSize: 16,
+                      ),))
+                    ],
+                  ),
+                  const SizedBox(height: 5),
 
                   // X-ray image placeholder
                   Container(
