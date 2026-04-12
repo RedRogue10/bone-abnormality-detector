@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:bone_abnormality_detector/pages/xray_info.dart';
 
 class XrayHistory extends StatefulWidget {
   final int patientId;
@@ -61,7 +62,13 @@ class _XrayHistoryState extends State<XrayHistory> {
           borderRadius: BorderRadius.circular(16),
           child: InkWell(
             onTap: () {
-              // Go to Xray Results page for this specific scan
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      XrayInfo(xrayId: int.parse(item['id']!.split('#')[1])),
+                ),
+              );
             },
             borderRadius: BorderRadius.circular(16),
             child: Container(
