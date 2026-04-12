@@ -1,3 +1,4 @@
+import 'package:bone_abnormality_detector/pages/xray_history.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -324,7 +325,14 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                               borderRadius: BorderRadius.circular(12),
                               child: InkWell(
                                 onTap: () {
-                                  // Go to List of Xray History
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => XrayHistory(
+                                        patientId: widget.patientId,
+                                      ),
+                                    ),
+                                  );
                                 },
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
