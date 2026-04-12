@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -139,16 +141,19 @@ class _XrayResultPageState extends State<XrayResultPage> {
                   const SizedBox(height: 5),
 
                   // X-ray image placeholder
-                  Container(
-                    width: double.infinity,
-                    height: 260,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Icon(Icons.image_outlined,
-                          color: Colors.white38, size: 64),
+                  GestureDetector(
+                    onTap: () => _showImageViewer(context),
+                    child: Container(
+                      width: double.infinity,
+                      height: 350,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.image_outlined,
+                            color: Colors.white38, size: 64),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -326,6 +331,58 @@ class _XrayResultPageState extends State<XrayResultPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showImageViewer(BuildContext context) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        transitionDuration: const Duration(milliseconds: 200),
+        reverseTransitionDuration: const Duration(milliseconds: 150),
+        pageBuilder: (ctx, animation, secondaryAnimation) {
+          return FadeTransition(
+            opacity: animation,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => Navigator.pop(ctx),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Blurred + dimmed background
+                  BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: ColoredBox(
+                        color: Colors.black.withValues(alpha: 0.55)),
+                  ),
+                  // Enlarged image — inner tap does not dismiss
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const AspectRatio(
+                          aspectRatio: 1,
+                          child: Center(
+                            child: Icon(Icons.image_outlined,
+                                color: Colors.white38, size: 96),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
