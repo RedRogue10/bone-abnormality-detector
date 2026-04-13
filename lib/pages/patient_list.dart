@@ -1,3 +1,4 @@
+import 'package:bone_abnormality_detector/pages/patient_info.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'add_patient.dart';
@@ -11,16 +12,16 @@ class PatientListPage extends StatefulWidget {
 
 class _PatientListPageState extends State<PatientListPage> {
   // Colors
-  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color altBlue     = Color(0xFF276ED1);
-  static const Color darkRed     = Color(0xFF833838);
-  static const Color orange      = Color(0xFFD16227);
-  static const Color gold        = Color(0xFFD19527);
-  static const Color purple      = Color(0xFF463883);
-  static const Color grey        = Color(0xFF808080);
-  static const Color white       = Colors.white;
-  static const Color bgGrey      = Color(0xFFF0F0F0);
+  static const Color altBlue = Color(0xFF276ED1);
+  static const Color darkRed = Color(0xFF833838);
+  static const Color orange = Color(0xFFD16227);
+  static const Color gold = Color(0xFFD19527);
+  static const Color purple = Color(0xFF463883);
+  static const Color grey = Color(0xFF808080);
+  static const Color white = Colors.white;
+  static const Color bgGrey = Color(0xFFF0F0F0);
 
   // Sort Options
   static const List<String> _sortOptions = ['Name (A-Z)', 'Age', 'Date added'];
@@ -34,6 +35,7 @@ class _PatientListPageState extends State<PatientListPage> {
   // Patient Data
   final List<Map<String, dynamic>> _allPatients = [
     {
+      'id': 1,
       'initials': 'JC',
       'name': 'Juan de la Cruz Jr.',
       'age': 33,
@@ -42,6 +44,7 @@ class _PatientListPageState extends State<PatientListPage> {
       'color': primaryBlue,
     },
     {
+      'id': 2,
       'initials': 'JD',
       'name': 'John Doe',
       'age': 47,
@@ -50,6 +53,7 @@ class _PatientListPageState extends State<PatientListPage> {
       'color': purple,
     },
     {
+      'id': 3,
       'initials': 'RF',
       'name': 'Roberto Flores',
       'age': 58,
@@ -58,6 +62,7 @@ class _PatientListPageState extends State<PatientListPage> {
       'color': altBlue,
     },
     {
+      'id': 4,
       'initials': 'AC',
       'name': 'Ana Clara Bautista',
       'age': 28,
@@ -66,6 +71,7 @@ class _PatientListPageState extends State<PatientListPage> {
       'color': darkRed,
     },
     {
+      'id': 5,
       'initials': 'BL',
       'name': 'Bernadita Lim',
       'age': 20,
@@ -77,6 +83,7 @@ class _PatientListPageState extends State<PatientListPage> {
 
   // The "recent / pinned" patient shown in the highlighted card
   final Map<String, dynamic> _recentPatient = {
+    'id': 6,
     'initials': 'LR',
     'name': 'Luz Reyes',
     'age': 50,
@@ -91,16 +98,17 @@ class _PatientListPageState extends State<PatientListPage> {
     // Filter by search
     if (_searchQuery.isNotEmpty) {
       list = list
-          .where((p) => (p['name'] as String)
-              .toLowerCase()
-              .contains(_searchQuery.toLowerCase()))
+          .where(
+            (p) => (p['name'] as String).toLowerCase().contains(
+              _searchQuery.toLowerCase(),
+            ),
+          )
           .toList();
     }
 
     // Sort
     if (_selectedSort == 'Name (A-Z)') {
-      list.sort((a, b) =>
-          (a['name'] as String).compareTo(b['name'] as String));
+      list.sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
     } else if (_selectedSort == 'Age') {
       list.sort((a, b) => (a['age'] as int).compareTo(b['age'] as int));
     }
@@ -155,9 +163,7 @@ class _PatientListPageState extends State<PatientListPage> {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const AddPatientPage(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const AddPatientPage()),
                   );
                 },
               ),
@@ -169,8 +175,7 @@ class _PatientListPageState extends State<PatientListPage> {
         body: Stack(
           children: [
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -203,8 +208,7 @@ class _PatientListPageState extends State<PatientListPage> {
                   Expanded(
                     child: ListView.separated(
                       itemCount: _filteredPatients.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: 10),
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, index) =>
                           _buildPatientCard(_filteredPatients[index]),
                     ),
@@ -234,12 +238,13 @@ class _PatientListPageState extends State<PatientListPage> {
         style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
         decoration: InputDecoration(
           hintText: 'Search patient name',
-          hintStyle:
-              GoogleFonts.poppins(fontSize: 14, color: grey),
+          hintStyle: GoogleFonts.poppins(fontSize: 14, color: grey),
           prefixIcon: const Icon(Icons.search, color: grey),
           border: InputBorder.none,
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 14,
+            horizontal: 16,
+          ),
         ),
       ),
     );
@@ -249,11 +254,15 @@ class _PatientListPageState extends State<PatientListPage> {
   Widget _buildRecentCard(Map<String, dynamic> patient) {
     return GestureDetector(
       onTap: () {
-        // TODO: Navigator.push → PatientDetailPage
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PatientInfoScreen(patientId: patient['id']),
+          ),
+        );
       },
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: darkNavy,
           borderRadius: BorderRadius.circular(14),
@@ -301,14 +310,10 @@ class _PatientListPageState extends State<PatientListPage> {
               children: [
                 Text(
                   patient['date'] as String,
-                  style: GoogleFonts.poppins(
-                    color: white,
-                    fontSize: 11,
-                  ),
+                  style: GoogleFonts.poppins(color: white, fontSize: 11),
                 ),
                 const SizedBox(height: 6),
-                const Icon(Icons.arrow_forward_ios,
-                    size: 14, color: white),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: white),
               ],
             ),
           ],
@@ -317,15 +322,19 @@ class _PatientListPageState extends State<PatientListPage> {
     );
   }
 
-  // Regular patient card 
+  // Regular patient card
   Widget _buildPatientCard(Map<String, dynamic> patient) {
     return GestureDetector(
       onTap: () {
-        // TODO: Navigator.push → PatientDetailPage
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PatientInfoScreen(patientId: patient['id']),
+          ),
+        );
       },
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: bgGrey,
           borderRadius: BorderRadius.circular(12),
@@ -373,14 +382,10 @@ class _PatientListPageState extends State<PatientListPage> {
               children: [
                 Text(
                   patient['date'] as String,
-                  style: GoogleFonts.poppins(
-                    color: grey,
-                    fontSize: 11,
-                  ),
+                  style: GoogleFonts.poppins(color: grey, fontSize: 11),
                 ),
                 const SizedBox(height: 6),
-                const Icon(Icons.arrow_forward_ios,
-                    size: 13, color: grey),
+                const Icon(Icons.arrow_forward_ios, size: 13, color: grey),
               ],
             ),
           ],
@@ -412,10 +417,10 @@ class _PatientListPageState extends State<PatientListPage> {
     );
   }
 
-  // Sort dropdown 
+  // Sort dropdown
   Widget _buildSortDropdown() {
     return Positioned(
-      top: 230, 
+      top: 230,
       right: 16,
       child: Material(
         elevation: 6,
@@ -443,12 +448,13 @@ class _PatientListPageState extends State<PatientListPage> {
                 child: Container(
                   color: Colors.transparent,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   child: Row(
                     children: [
                       if (selected)
-                        const Icon(Icons.check,
-                            size: 16, color: primaryBlue)
+                        const Icon(Icons.check, size: 16, color: primaryBlue)
                       else
                         const SizedBox(width: 16),
                       const SizedBox(width: 8),
