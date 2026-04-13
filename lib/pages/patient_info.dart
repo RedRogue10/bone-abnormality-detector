@@ -21,10 +21,6 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
   // Replace with actual check from database
   bool hasXrayHistory = true;
 
-  // Replace with actual profile image URL
-  String? profileImageUrl =
-      'https://plus.unsplash.com/premium_photo-1671656349322-41de944d259b?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'; // Example image URL, replace with actual data
-
   Widget _buildInfoRow(String label, String value) {
     return Row(
       crossAxisAlignment:
@@ -140,21 +136,16 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       CircleAvatar(
-                        backgroundImage: profileImageUrl != null
-                            ? NetworkImage(profileImageUrl!)
-                            : null,
                         backgroundColor: primaryBlue,
                         minRadius: 40.0,
-                        child: profileImageUrl == null
-                            ? const Text(
-                                'JC',
-                                style: TextStyle(
-                                  color: white,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
-                                ),
-                              )
-                            : null,
+                        child: const Text(
+                          'JC',
+                          style: TextStyle(
+                            color: white,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
                       ),
                       SizedBox(width: 8),
                       Column(

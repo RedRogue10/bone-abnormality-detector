@@ -189,34 +189,48 @@ class _XrayHistoryState extends State<XrayHistory> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  height: 160,
-                  decoration: BoxDecoration(color: darkNavy),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: primaryBlue,
+                      minRadius: 40.0,
+                      child: const Text(
+                        'JC',
+                        style: TextStyle(
+                          color: white,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Juan de la Cruz Jr.: ${widget.patientId}',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.oswald(
-                            color: white,
-                            fontSize: 20,
-                            letterSpacing: 1.2,
+                          'Juan Dela Cruz',
+                          style: GoogleFonts.inter(
+                            color: primaryBlue,
+                            fontSize: 18,
                           ),
                         ),
                         Text(
-                          '33 years old, Male',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.oswald(
-                            color: primaryBlue,
-                            fontSize: 16,
-                            letterSpacing: 1,
+                          '33 Years Old',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          'Male',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: Colors.black87,
                           ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 24),
                 ...xrayItems.map(_buildXrayButton).toList(),
