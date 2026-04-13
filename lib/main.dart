@@ -1,3 +1,4 @@
+import 'package:bone_abnormality_detector/pages/camera_capture.dart';
 import 'package:flutter/material.dart';
 import 'pages/dashboard.dart';
 import 'pages/patient_list.dart';
@@ -115,6 +116,27 @@ class HomePage extends StatelessWidget {
               ),
               child: const Text(
                 'Go to Results Page',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Add Patient button
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CameraCapturePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0B2545),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 4,
+              ),
+              child: const Text(
+                'Go to Camera Page',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1),
               ),
             ),
