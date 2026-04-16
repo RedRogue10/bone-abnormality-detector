@@ -5,13 +5,13 @@ import 'patient_list.dart';
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
-  static const Color darkNavy     = Color(0xFF0B2545);
-  static const Color primaryBlue  = Color(0xFF1A73E9);
+  static const Color darkNavy = Color(0xFF0B2545);
+  static const Color primaryBlue = Color(0xFF1A73E9);
   static const Color accentOrange = Color(0xFFD19527);
-  static const Color grey         = Color(0xFF808080);
-  static const Color white        = Colors.white;
-  static const Color cameraRing   = Color(0xFFB8D8D8);
-  static const Color cameraIcon   = Color(0xFF001F54); 
+  static const Color grey = Color(0xFF808080);
+  static const Color white = Colors.white;
+  static const Color cameraRing = Color(0xFFB8D8D8);
+  static const Color cameraIcon = Color(0xFF001F54);
 
   final List<Map<String, dynamic>> recentPatients = const [
     {
@@ -45,12 +45,7 @@ class DashboardPage extends StatelessWidget {
         ),
         title: Text(
           'DASHBOARD',
-          style: GoogleFonts.oswald(
-            color: white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            letterSpacing: 2,
-          ),
+          style: GoogleFonts.oswald(color: white, fontSize: 20),
         ),
         centerTitle: true,
         actions: [
@@ -117,7 +112,9 @@ class DashboardPage extends StatelessWidget {
                       highlightColor: primaryBlue.withOpacity(0.08),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 4),
+                          horizontal: 4,
+                          vertical: 4,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -132,8 +129,11 @@ class DashboardPage extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 4),
-                            const Icon(Icons.arrow_forward,
-                                color: primaryBlue, size: 18),
+                            const Icon(
+                              Icons.arrow_forward,
+                              color: primaryBlue,
+                              size: 18,
+                            ),
                           ],
                         ),
                       ),
@@ -155,14 +155,14 @@ class DashboardPage extends StatelessWidget {
             ),
           ),
 
-          // Bottom Camera Bar 
+          // Bottom Camera Bar
           _buildBottomBar(context),
         ],
       ),
     );
   }
 
-  // SCAN AN IMAGE button 
+  // SCAN AN IMAGE button
   Widget _buildScanButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
@@ -178,16 +178,11 @@ class DashboardPage extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.camera_alt_outlined, color: white, size: 26),
+            const Icon(Icons.camera_alt_outlined, color: white, size: 40),
             const SizedBox(width: 12),
             Text(
               'SCAN AN IMAGE',
-              style: GoogleFonts.oswald(
-                color: white,
-                fontWeight: FontWeight.bold,
-                fontSize: 17,
-                letterSpacing: 1.5,
-              ),
+              style: GoogleFonts.oswald(color: white, fontSize: 25),
             ),
           ],
         ),
@@ -218,8 +213,7 @@ class DashboardPage extends StatelessWidget {
               label,
               style: GoogleFonts.oswald(
                 color: white,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontSize: 16,
                 letterSpacing: 1.2,
               ),
             ),
@@ -229,12 +223,11 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // Patient list card 
-  Widget _buildPatientCard(
-      BuildContext context, Map<String, dynamic> patient) {
+  // Patient list card
+  Widget _buildPatientCard(BuildContext context, Map<String, dynamic> patient) {
     final Color avatarColor = patient['color'] as Color;
-    final String name       = patient['name'] as String;
-    final String details    = patient['details'] as String;
+    final String name = patient['name'] as String;
+    final String details = patient['details'] as String;
 
     return GestureDetector(
       onTap: () {
@@ -293,7 +286,7 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // Bottom dark-navy bar 
+  // Bottom dark-navy bar
   Widget _buildBottomBar(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -313,11 +306,8 @@ class DashboardPage extends StatelessWidget {
                 height: 68,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: cameraRing, 
-                  border: Border.all(
-                    color: cameraRing,
-                    width: 4,
-                  ),
+                  color: cameraRing,
+                  border: Border.all(color: cameraRing, width: 4),
                   boxShadow: [
                     BoxShadow(
                       color: cameraRing.withOpacity(0.45),
