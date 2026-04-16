@@ -5,6 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/assets/models/mura_yolov8_categorical_model.pt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lib/model_processing.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
     </list>
@@ -78,6 +80,11 @@
     "show.migrate.to.gradle.popup": "false"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\Projects\bone_abnormality_detector\assets\models" />
+    </key>
+  </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
       <changelist id="d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9" name="Changes" comment="" />
