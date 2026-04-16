@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 
 class CameraCapturePage extends StatefulWidget {
   const CameraCapturePage({super.key});
@@ -12,7 +15,7 @@ class CameraCapturePage extends StatefulWidget {
 class _CameraCapturePageState extends State<CameraCapturePage> {
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color white    = Colors.white;
-
+  final ImagePicker picker = ImagePicker();
   CameraController? _controller;
   List<CameraDescription> _cameras = [];
   int _selectedCameraIndex = 0;
@@ -55,7 +58,10 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
     setState(() => _isInitialized = false);
     await _startCamera(_selectedCameraIndex);
   }
-
+  Future<File> pickImage() async{
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    return File(image!.path);
+  }
   @override
   void dispose() {
     _controller?.dispose();
