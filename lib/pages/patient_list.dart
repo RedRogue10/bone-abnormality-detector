@@ -1,7 +1,10 @@
+// import 'package:bone_abnormality_detector/pages/patient_info.dart';
 import 'package:bone_abnormality_detector/pages/patient_info.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'add_patient.dart';
+import '../services/database_service.dart';
+import '../models/patient.dart';
 
 class PatientListPage extends StatefulWidget {
   const PatientListPage({super.key});
@@ -14,11 +17,11 @@ class _PatientListPageState extends State<PatientListPage> {
   // Colors
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color altBlue = Color(0xFF276ED1);
-  static const Color darkRed = Color(0xFF833838);
-  static const Color orange = Color(0xFFD16227);
+  // static const Color altBlue = Color(0xFF276ED1);
+  // static const Color darkRed = Color(0xFF833838);
+  // static const Color orange = Color(0xFFD16227);
   static const Color gold = Color(0xFFD19527);
-  static const Color purple = Color(0xFF463883);
+  // static const Color purple = Color(0xFF463883);
   static const Color grey = Color(0xFF808080);
   static const Color white = Colors.white;
   static const Color bgGrey = Color(0xFFF0F0F0);
@@ -33,87 +36,51 @@ class _PatientListPageState extends State<PatientListPage> {
   String _searchQuery = '';
 
   // Patient Data
-  final List<Map<String, dynamic>> _allPatients = [
-    {
-      'id': 1,
-      'initials': 'JC',
-      'name': 'Juan de la Cruz Jr.',
-      'age': 33,
-      'gender': 'Male',
-      'date': 'Today',
-      'color': primaryBlue,
-    },
-    {
-      'id': 2,
-      'initials': 'JD',
-      'name': 'John Doe',
-      'age': 47,
-      'gender': 'Female',
-      'date': 'Mar 26',
-      'color': purple,
-    },
-    {
-      'id': 3,
-      'initials': 'RF',
-      'name': 'Roberto Flores',
-      'age': 58,
-      'gender': 'Male',
-      'date': 'Mar 24',
-      'color': altBlue,
-    },
-    {
-      'id': 4,
-      'initials': 'AC',
-      'name': 'Ana Clara Bautista',
-      'age': 28,
-      'gender': 'Female',
-      'date': 'Mar 21',
-      'color': darkRed,
-    },
-    {
-      'id': 5,
-      'initials': 'BL',
-      'name': 'Bernadita Lim',
-      'age': 20,
-      'gender': 'Female',
-      'date': 'Mar 20',
-      'color': orange,
-    },
-  ];
+  List<Patient> _patients = [];
+  bool _isLoading = true;
 
-  // The "recent / pinned" patient shown in the highlighted card
-  final Map<String, dynamic> _recentPatient = {
-    'id': 6,
-    'initials': 'LR',
-    'name': 'Luz Reyes',
-    'age': 50,
-    'gender': 'Female',
-    'date': 'Today',
-    'color': gold,
-  };
-
-  List<Map<String, dynamic>> get _filteredPatients {
-    List<Map<String, dynamic>> list = List.from(_allPatients);
+  List<Patient> get _filteredPatients {
+    List<Patient> list = List.from(_patients);
 
     // Filter by search
     if (_searchQuery.isNotEmpty) {
       list = list
           .where(
-            (p) => (p['name'] as String).toLowerCase().contains(
-              _searchQuery.toLowerCase(),
-            ),
+            (p) =>
+                p.fullName.toLowerCase().contains(_searchQuery.toLowerCase()),
           )
           .toList();
     }
 
     // Sort
     if (_selectedSort == 'Name (A-Z)') {
-      list.sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+      list.sort((a, b) => a.fullName.compareTo(b.fullName));
     } else if (_selectedSort == 'Age') {
-      list.sort((a, b) => (a['age'] as int).compareTo(b['age'] as int));
+      list.sort((a, b) => a.age.compareTo(b.age));
     }
 
     return list;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatients();
+  }
+
+  Future<void> _loadPatients() async {
+    try {
+      final patients = await DatabaseService().getPatients();
+      setState(() {
+        _patients = patients;
+        _isLoading = false;
+      });
+    } catch (e) {
+      // Handle error, maybe show a snackbar
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -186,7 +153,7 @@ class _PatientListPageState extends State<PatientListPage> {
                   const SizedBox(height: 16),
 
                   // Recent / pinned patient card
-                  _buildRecentCard(_recentPatient),
+                  if (_patients.isNotEmpty) _buildRecentCard(_patients.first),
                   const SizedBox(height: 20),
 
                   // "All Patients" header + Sort button
@@ -208,12 +175,15 @@ class _PatientListPageState extends State<PatientListPage> {
 
                   // Patient list
                   Expanded(
-                    child: ListView.separated(
-                      itemCount: _filteredPatients.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) =>
-                          _buildPatientCard(_filteredPatients[index]),
-                    ),
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : ListView.separated(
+                            itemCount: _filteredPatients.length,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 10),
+                            itemBuilder: (context, index) =>
+                                _buildPatientCard(_filteredPatients[index]),
+                          ),
                   ),
                 ],
               ),
@@ -253,13 +223,13 @@ class _PatientListPageState extends State<PatientListPage> {
   }
 
   // Highlighted recent card
-  Widget _buildRecentCard(Map<String, dynamic> patient) {
+  Widget _buildRecentCard(Patient patient) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PatientInfoScreen(patientId: patient['id']),
+            builder: (_) => PatientInfoScreen(patientId: patient.id),
           ),
         );
       },
@@ -273,9 +243,9 @@ class _PatientListPageState extends State<PatientListPage> {
           children: [
             CircleAvatar(
               radius: 26,
-              backgroundColor: patient['color'] as Color,
+              backgroundColor: gold,
               child: Text(
-                patient['initials'] as String,
+                patient.initials,
                 style: GoogleFonts.poppins(
                   color: white,
                   fontWeight: FontWeight.bold,
@@ -289,7 +259,7 @@ class _PatientListPageState extends State<PatientListPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    patient['name'] as String,
+                    patient.fullName,
                     style: GoogleFonts.poppins(
                       color: white,
                       fontWeight: FontWeight.w600,
@@ -298,7 +268,7 @@ class _PatientListPageState extends State<PatientListPage> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${patient['age']} years, ${patient['gender']}',
+                    '${patient.age} years, ${patient.gender}',
                     style: GoogleFonts.poppins(
                       color: primaryBlue,
                       fontSize: 12,
@@ -311,7 +281,7 @@ class _PatientListPageState extends State<PatientListPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  patient['date'] as String,
+                  'Today',
                   style: GoogleFonts.poppins(color: white, fontSize: 11),
                 ),
                 const SizedBox(height: 6),
@@ -325,13 +295,13 @@ class _PatientListPageState extends State<PatientListPage> {
   }
 
   // Regular patient card
-  Widget _buildPatientCard(Map<String, dynamic> patient) {
+  Widget _buildPatientCard(Patient patient) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PatientInfoScreen(patientId: patient['id']),
+            builder: (_) => PatientInfoScreen(patientId: patient.id),
           ),
         );
       },
@@ -345,9 +315,10 @@ class _PatientListPageState extends State<PatientListPage> {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: patient['color'] as Color,
+              backgroundColor:
+                  primaryBlue, // You can customize color based on patient
               child: Text(
-                patient['initials'] as String,
+                patient.initials,
                 style: GoogleFonts.poppins(
                   color: white,
                   fontWeight: FontWeight.bold,
@@ -361,7 +332,7 @@ class _PatientListPageState extends State<PatientListPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    patient['name'] as String,
+                    patient.fullName,
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -370,7 +341,7 @@ class _PatientListPageState extends State<PatientListPage> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${patient['age']} years, ${patient['gender']}',
+                    '${patient.age} years, ${patient.gender}',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: primaryBlue,
@@ -383,7 +354,7 @@ class _PatientListPageState extends State<PatientListPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  patient['date'] as String,
+                  'Today', // You can calculate date added
                   style: GoogleFonts.poppins(color: grey, fontSize: 11),
                 ),
                 const SizedBox(height: 6),

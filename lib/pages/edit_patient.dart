@@ -20,7 +20,6 @@ class _EditPatientPageState extends State<EditPatientPage> {
   Patient? _patient;
   bool _isLoading = true;
 
-  // Placeholder, in real app it should get patient id
   late final TextEditingController _firstNameCtrl = TextEditingController();
   late final TextEditingController _lastNameCtrl = TextEditingController();
   late final TextEditingController _middleNameCtrl = TextEditingController();
@@ -195,6 +194,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
         ),
         ElevatedButton(
           onPressed: () {
+            DatabaseService().deletePatient(widget.patientId);
             Navigator.pop(context);
             Navigator.pop(context);
           },

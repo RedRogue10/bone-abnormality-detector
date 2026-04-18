@@ -98,4 +98,28 @@ class Patient {
       updatedAt: (map['updatedAt'] as Timestamp).toDate(),
     );
   }
+
+  // Getters
+  String get fullName {
+    final middle = middleName != null ? ' $middleName' : '';
+    return '$firstName$middle $lastName';
+  }
+
+  String get gender => sex;
+
+  int get age {
+    final now = DateTime.now();
+    int age = now.year - birthDate.year;
+    if (now.month < birthDate.month ||
+        (now.month == birthDate.month && now.day < birthDate.day)) {
+      age--;
+    }
+    return age;
+  }
+
+  String get initials {
+    final firstInitial = firstName.isNotEmpty ? firstName[0].toUpperCase() : '';
+    final lastInitial = lastName.isNotEmpty ? lastName[0].toUpperCase() : '';
+    return '$firstInitial$lastInitial';
+  }
 }

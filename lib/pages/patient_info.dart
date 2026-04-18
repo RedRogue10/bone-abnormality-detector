@@ -1,11 +1,11 @@
-import 'package:bone_abnormality_detector/pages/xray_history.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'edit_patient.dart';
-// import 'package:bone_abnormality_detector/widgets/shared/patient_form_shared.dart'; //temporary for History List test
+import 'edit_patient.dart';
+import '../services/database_service.dart';
+import '../models/patient.dart';
 
 class PatientInfoScreen extends StatefulWidget {
-  final int patientId;
+  final String patientId;
 
   const PatientInfoScreen({super.key, required this.patientId});
 
@@ -20,18 +20,59 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
   static const Color grey = Color(0xFF808080);
   static const Color white = Colors.white;
 
-  // final List<PatientHistoryRecord> _historyRecords = [];
-
   // Replace with actual check from database
   bool hasXrayHistory = true;
+  Patient? _patient;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPatient();
+  }
+
+  Future<void> _loadPatient() async {
+    try {
+      Patient patient = await DatabaseService().getPatientById(
+        widget.patientId,
+      );
+      setState(() {
+        _patient = patient;
+        // _historyRecords = patient.historyRecords;
+        // hasXrayHistory = patient.xrayHistory.isNotEmpty;
+      });
+    } catch (e) {
+      // Handle error, e.g. show a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load patient data: $e')),
+      );
+    }
+  }
+
+  String get fullName {
+    if (_patient == null) return 'Loading...';
+    return '${_patient!.firstName} ${_patient!.middleName ?? ''} ${_patient!.lastName}'
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  String get age {
+    if (_patient == null) return '-';
+    final today = DateTime.now();
+    final birth = _patient!.birthDate;
+    int age = today.year - birth.year;
+    if (today.month < birth.month ||
+        (today.month == birth.month && today.day < birth.day)) {
+      age--;
+    }
+    return age.toString();
+  }
 
   Widget _buildInfoRow(String label, String value) {
     return Row(
-      crossAxisAlignment:
-          CrossAxisAlignment.start, // Align to top for multi-line values
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 120, // Fixed width for labels to align them
+          width: 120,
           child: Text(
             label,
             style: GoogleFonts.poppins(
@@ -45,7 +86,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
           child: Text(
             value,
             style: GoogleFonts.poppins(fontSize: 16, letterSpacing: 0.5),
-            softWrap: true, // Allow wrapping
+            softWrap: true,
           ),
         ),
       ],
@@ -158,7 +199,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                           Row(
                             children: [
                               Text(
-                                'Juan de la Cruz Jr.',
+                                fullName,
                                 style: GoogleFonts.oswald(
                                   fontSize: 16,
                                   letterSpacing: 1,
@@ -166,10 +207,17 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                               ),
                               IconButton(
                                 onPressed: () {
-                                  // TODO: Edit Patient Info
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => EditPatientPage(
+                                        patientId: widget.patientId,
+                                      ),
+                                    ),
+                                  ).then((_) => _loadPatient());
                                 },
                                 icon: const Icon(
-                                  Icons.edit,
+                                  Icons.edit_square,
                                   size: 16,
                                   color: primaryBlue,
                                 ),
@@ -177,7 +225,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                             ],
                           ),
                           Text(
-                            '33, Male',
+                            '${_patient?.age ?? '-'}, ${_patient?.sex ?? '-'}',
                             style: TextStyle(
                               fontSize: 12,
                               color: primaryBlue,
@@ -215,15 +263,20 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Column(
                           children: [
-                            _buildInfoRow('Name', 'Juan de la Cruz Jr.'),
-                            _buildInfoRow('Age', '33'),
-                            _buildInfoRow('Sex', 'Male'),
-                            _buildInfoRow('Birthdate', 'January 1, 1990'),
-                            _buildInfoRow('Contact Number', '09123456789'),
+                            _buildInfoRow('Name', fullName),
+                            _buildInfoRow('Age', age),
+                            _buildInfoRow('Sex', _patient?.sex ?? '-'),
                             _buildInfoRow(
-                              'Address',
-                              '123 Main Street, City, Country',
+                              'Birthdate',
+                              _patient != null
+                                  ? '${_patient!.birthDate.month}/${_patient!.birthDate.day}/${_patient!.birthDate.year}'
+                                  : '-',
                             ),
+                            _buildInfoRow(
+                              'Contact Number',
+                              _patient?.contactNumber ?? '-',
+                            ),
+                            _buildInfoRow('Address', _patient?.address ?? '-'),
                           ],
                         ),
                       ),
@@ -246,9 +299,18 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Column(
                           children: [
-                            _buildInfoRow('Name', 'Rica J. de la Cruz'),
-                            _buildInfoRow('Contact Number', '0921-112-3421'),
-                            _buildInfoRow('Relationship', 'Wife'),
+                            _buildInfoRow(
+                              'Name',
+                              _patient?.emergencyContact?.name ?? '-',
+                            ),
+                            _buildInfoRow(
+                              'Contact Number',
+                              _patient?.emergencyContact?.contactNumber ?? '-',
+                            ),
+                            _buildInfoRow(
+                              'Relationship',
+                              _patient?.emergencyContact?.relationship ?? '-',
+                            ),
                           ],
                         ),
                       ),
@@ -285,24 +347,28 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Will convert this to a ListView.builder when we have real data
-                                    _buildHistoryEntry(
-                                      date: '2023-10-01',
-                                      description:
-                                          'Initial consultation for bone abnormality detection.',
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _buildHistoryEntry(
-                                      date: '2023-10-15',
-                                      description:
-                                          'X-ray performed; results show potential fracture in femur.',
-                                    ),
-                                    const SizedBox(height: 16),
-                                    _buildHistoryEntry(
-                                      date: '2023-11-01',
-                                      description:
-                                          'Follow-up appointment; treatment plan discussed.',
-                                    ),
+                                    if (_patient?.historyRecords.isEmpty ??
+                                        true)
+                                      Text(
+                                        'No patient history records available.',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          fontStyle: FontStyle.italic,
+                                          color: grey,
+                                        ),
+                                      )
+                                    else
+                                      ..._patient!.historyRecords.map(
+                                        (record) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 16,
+                                          ),
+                                          child: _buildHistoryEntry(
+                                            date: record.date,
+                                            description: record.note,
+                                          ),
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),
@@ -319,14 +385,14 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                               borderRadius: BorderRadius.circular(12),
                               child: InkWell(
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => XrayHistory(
-                                        patientId: widget.patientId,
-                                      ),
-                                    ),
-                                  );
+                                  // Navigator.push(
+                                  //   context,
+                                  //   MaterialPageRoute(
+                                  //     builder: (_) => XrayHistory(
+                                  //       patientId: widget.patientId,
+                                  //     ),
+                                  //   ),
+                                  // );
                                 },
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(
