@@ -145,21 +145,23 @@ class _PatientListPageState extends State<PatientListPage> {
             'Patient List',
             style: GoogleFonts.oswald(
               color: white,
-              fontWeight: FontWeight.bold,
               fontSize: 20,
-              letterSpacing: 1.5,
+              letterSpacing: 1,
             ),
           ),
           centerTitle: true,
           actions: [
             Container(
+              width: 35,
+              height: 35,
               margin: const EdgeInsets.only(right: 12),
               decoration: const BoxDecoration(
                 color: primaryBlue,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                icon: const Icon(Icons.add, color: white, size: 22),
+                icon: const Icon(Icons.add, color: white, size: 20),
+                constraints: const BoxConstraints(),
                 onPressed: () {
                   Navigator.push(
                     context,
