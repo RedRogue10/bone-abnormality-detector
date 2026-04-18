@@ -1,13 +1,22 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'patient_list.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  User? user = FirebaseAuth.instance.currentUser;
+  final db = FirebaseFirestore.instance;
 
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color accentOrange = Color(0xFFD19527);
   static const Color grey = Color(0xFF808080);
   static const Color white = Colors.white;
   static const Color cameraRing = Color(0xFFB8D8D8);
@@ -167,6 +176,11 @@ class DashboardPage extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         // TODO: Navigator.push → ScanPage
+        // Temporary to check firebase
+        String text = "Scanned XRAY at ${DateTime.now()}";
+        print('Action: $text');
+        db.collection('scans').add({'timestamp': DateTime.now(), 'text': text});
+        print("Current user: ${user?.email ?? 'No user logged in'}");
       },
       child: Container(
         width: double.infinity,

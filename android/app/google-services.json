@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "95271790157",
+    "project_id": "bone-abnormality-detector",
+    "storage_bucket": "bone-abnormality-detector.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:95271790157:android:0bbac2c6056908f01b9e04",
+        "android_client_info": {
+          "package_name": "com.example.bone_abnormality_detector"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqYwbBXlLI_U_AIDnegTDqLuWtmu8Et3Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
