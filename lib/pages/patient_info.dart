@@ -1,8 +1,8 @@
 import 'package:bone_abnormality_detector/pages/xray_history.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'edit_patient.dart';
-import 'package:bone_abnormality_detector/widgets/shared/patient_form_shared.dart'; //temporary for History List test
+// import 'edit_patient.dart';
+// import 'package:bone_abnormality_detector/widgets/shared/patient_form_shared.dart'; //temporary for History List test
 
 class PatientInfoScreen extends StatefulWidget {
   final int patientId;
@@ -20,7 +20,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
   static const Color grey = Color(0xFF808080);
   static const Color white = Colors.white;
 
-  final List<PatientHistoryRecord> _historyRecords = [];
+  // final List<PatientHistoryRecord> _historyRecords = [];
 
   // Replace with actual check from database
   bool hasXrayHistory = true;
@@ -166,28 +166,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                               ),
                               IconButton(
                                 onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => EditPatientPage(
-                                        // Replace with final patientId when implemented
-                                        //patientId: widget.patientId,
-                                        firstName: 'sample',
-                                        lastName: 'sample',
-                                        middleName: 'sample',
-                                        sex: 'sample',
-                                        dob: 'sample',
-                                        contactNumber: 'sample',
-                                        address: 'sample',
-                                        historyRecords: List.from(
-                                          _historyRecords,
-                                        ),
-                                        ecName: 'sample',
-                                        ecContact: 'sample',
-                                        ecRelationship: 'sample',
-                                      ),
-                                    ),
-                                  );
+                                  // TODO: Edit Patient Info
                                 },
                                 icon: const Icon(
                                   Icons.edit,

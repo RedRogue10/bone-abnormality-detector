@@ -6,6 +6,11 @@ class PatientHistoryRecord {
   String note;
 
   PatientHistoryRecord({required this.date, required this.note});
+
+  Map<String, dynamic> toMap() => {'date': date, 'note': note};
+
+  factory PatientHistoryRecord.fromMap(Map<String, dynamic> map) =>
+      PatientHistoryRecord(date: map['date'], note: map['note']);
 }
 
 const _darkNavy = Color(0xFF0B2545);
@@ -254,7 +259,7 @@ AppBar buildAppBar({
   required BuildContext context,
   required Widget title,
   required String actionLabel,
-  required VoidCallback onAction,
+  required Function()? onAction,
 }) {
   return AppBar(
     backgroundColor: _darkNavy,
