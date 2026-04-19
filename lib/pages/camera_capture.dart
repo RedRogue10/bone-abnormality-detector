@@ -20,7 +20,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
   List<CameraDescription> _cameras = [];
   int _selectedCameraIndex = 0;
   bool _isInitialized = false;
-  File? _pickedImage;
+  File? _capturedImage;
 
   @override
   void initState() {
@@ -59,11 +59,31 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
     setState(() => _isInitialized = false);
     await _startCamera(_selectedCameraIndex);
   }
+
   Future<void> _pickFromGallery() async {
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
-    setState(() => _pickedImage = File(image.path));
+    setState(() => _capturedImage = File(image.path));
   }
+
+  Future<void> _capturePhoto() async {
+    if (_controller == null || !_isInitialized) return;
+    try {
+      final XFile photo = await _controller!.takePicture();
+      setState(() => _capturedImage = File(photo.path));
+    } catch (e) {
+      debugPrint('Capture error: $e');
+    }
+  }
+
+  void _retake() {
+    setState(() => _capturedImage = null);
+  }
+
+  void _confirmImage() {
+    // TODO: pass _capturedImage to the result/analysis page
+  }
+
   @override
   void dispose() {
     _controller?.dispose();
@@ -101,21 +121,21 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
       body: Column(
         children: [
           Expanded(
-            child: _pickedImage != null
-                ? Image.file(_pickedImage!, fit: BoxFit.contain)
+            child: _capturedImage != null
+                ? Image.file(_capturedImage!, fit: BoxFit.contain)
                 : _isInitialized && _controller != null
                     ? CameraPreview(_controller!)
                     : const Center(
                         child: CircularProgressIndicator(color: white),
                       ),
           ),
-          _buildBottomBar(),
+          _capturedImage != null ? _buildConfirmBar() : _buildCameraBar(),
         ],
       ),
     );
   }
 
-  Widget _buildBottomBar() {
+  Widget _buildCameraBar() {
     return Container(
       color: Colors.black,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
@@ -123,14 +143,12 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Gallery / last photo
           IconButton(
-            icon: const Icon(Icons.pan_tool_outlined, color: white, size: 30),
+            icon: const Icon(Icons.photo_library_outlined, color: white, size: 30),
             onPressed: _pickFromGallery,
           ),
-          // Shutter button
           GestureDetector(
-            onTap: () {},
+            onTap: _capturePhoto,
             child: Container(
               width: 72,
               height: 72,
@@ -149,10 +167,48 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
               ),
             ),
           ),
-          // Flip camera
           IconButton(
             icon: const Icon(Icons.flip_camera_ios_outlined, color: white, size: 30),
             onPressed: _flipCamera,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmBar() {
+    return Container(
+      color: Colors.black,
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 40),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Retake
+          GestureDetector(
+            onTap: _retake,
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: white, width: 2.5),
+              ),
+              child: const Icon(Icons.close, color: white, size: 30),
+            ),
+          ),
+          // Confirm
+          GestureDetector(
+            onTap: _confirmImage,
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: white,
+              ),
+              child: const Icon(Icons.check, color: Colors.black, size: 34),
+            ),
           ),
         ],
       ),
