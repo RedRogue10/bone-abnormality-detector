@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
+import 'scan_analysis_page.dart';
 
 class CameraCapturePage extends StatefulWidget {
   const CameraCapturePage({super.key});
@@ -81,7 +82,13 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
   }
 
   void _confirmImage() {
-    // TODO: pass _capturedImage to the result/analysis page
+    if (_capturedImage == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ScanAnalysisPage(imageFile: _capturedImage!),
+      ),
+    );
   }
 
   @override
