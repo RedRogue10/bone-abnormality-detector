@@ -20,6 +20,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
   List<CameraDescription> _cameras = [];
   int _selectedCameraIndex = 0;
   bool _isInitialized = false;
+  File? _pickedImage;
 
   @override
   void initState() {
@@ -58,9 +59,10 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
     setState(() => _isInitialized = false);
     await _startCamera(_selectedCameraIndex);
   }
-  Future<File> pickImage() async{
+  Future<void> _pickFromGallery() async {
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    return File(image!.path);
+    if (image == null) return;
+    setState(() => _pickedImage = File(image.path));
   }
   @override
   void dispose() {
@@ -99,11 +101,13 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
       body: Column(
         children: [
           Expanded(
-            child: _isInitialized && _controller != null
-                ? CameraPreview(_controller!)
-                : const Center(
-                    child: CircularProgressIndicator(color: white),
-                  ),
+            child: _pickedImage != null
+                ? Image.file(_pickedImage!, fit: BoxFit.contain)
+                : _isInitialized && _controller != null
+                    ? CameraPreview(_controller!)
+                    : const Center(
+                        child: CircularProgressIndicator(color: white),
+                      ),
           ),
           _buildBottomBar(),
         ],
@@ -122,7 +126,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
           // Gallery / last photo
           IconButton(
             icon: const Icon(Icons.pan_tool_outlined, color: white, size: 30),
-            onPressed: () {},
+            onPressed: _pickFromGallery,
           ),
           // Shutter button
           GestureDetector(
