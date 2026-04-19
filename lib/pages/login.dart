@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/auth.dart';
 import 'dashboard.dart';
 
 class LoginSignup extends StatefulWidget {
@@ -14,6 +15,7 @@ class _LoginSignupState extends State<LoginSignup> {
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color white = Colors.white;
 
+  final Auth auth = Auth();
   TextEditingController emailController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
 
@@ -57,10 +59,7 @@ class _LoginSignupState extends State<LoginSignup> {
               String password = passwordController.text.trim();
 
               try {
-                await FirebaseAuth.instance.signInWithEmailAndPassword(
-                  email: email,
-                  password: password,
-                );
+                await auth.signInWithEmailAndPassword(email, password);
                 if (!context.mounted) return;
                 Navigator.push(
                   context,
@@ -81,10 +80,7 @@ class _LoginSignupState extends State<LoginSignup> {
               String password = passwordController.text.trim();
 
               try {
-                await FirebaseAuth.instance.createUserWithEmailAndPassword(
-                  email: email,
-                  password: password,
-                );
+                await auth.createUserWithEmailAndPassword(email, password);
                 if (!context.mounted) return;
                 Navigator.push(
                   context,

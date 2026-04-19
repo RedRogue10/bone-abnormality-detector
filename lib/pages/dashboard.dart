@@ -1,3 +1,4 @@
+import 'package:bone_abnormality_detector/main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -50,7 +51,12 @@ class _DashboardPageState extends State<DashboardPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: white),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HomePage()),
+            );
+          },
         ),
         title: Text(
           'DASHBOARD',
