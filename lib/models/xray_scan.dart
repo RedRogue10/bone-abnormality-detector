@@ -1,4 +1,5 @@
 import 'scan_result.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class XrayScan {
   final String id;
@@ -17,10 +18,21 @@ class XrayScan {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'imageUrl': imageUrl,
       'createdAt': createdAt,
+      'analysisStatus': analysisStatus,
       'result': result,
     };
+  }
+
+  // READ FROM FIRESTORE
+  factory XrayScan.fromMap(Map<String, dynamic> map, String id) {
+    return XrayScan(
+      id: id,
+      imageUrl: map['imageUrl'],
+      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      analysisStatus: map['analysisStatus'],
+      result: map['result'] != null ? ScanResult.fromMap(map['result']) : null,
+    );
   }
 }
