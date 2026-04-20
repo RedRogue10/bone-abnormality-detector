@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bone_abnormality_detector/pages/xray_result.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:camera/camera.dart';
@@ -86,7 +87,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ScanAnalysisPage(imageFile: _capturedImage!),
+        builder: (_) => XrayResultPage(imageFile: _capturedImage!),
       ),
     );
   }

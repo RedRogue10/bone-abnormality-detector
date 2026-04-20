@@ -6,6 +6,14 @@
   <component name="ChangeListManager">
     <list default="true" id="d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/finger.tflite" beforeDir="false" afterPath="$PROJECT_DIR$/assets/models/finger.tflite" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/forearm.tflite" beforeDir="false" afterPath="$PROJECT_DIR$/assets/models/forearm.tflite" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/hand.tflite" beforeDir="false" afterPath="$PROJECT_DIR$/assets/models/hand.tflite" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/humerus.tflite" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/models/shoulder.tflite" beforeDir="false" afterPath="$PROJECT_DIR$/assets/models/shoulder.tflite" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/pages/camera_capture.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/camera_capture.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/pages/xray_result.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/xray_result.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/services/model_processing.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/model_processing.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
