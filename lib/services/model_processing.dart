@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 import '../models/bone_prediction.dart';
@@ -27,13 +28,13 @@ class ModelProcessor {
   // Initialization 
 
   Future<void> initClassifier() async {
-    _classifier = YOLO(modelPath: _classifierPath, task: YOLOTask.classify, useGpu: false);
+    _classifier = YOLO(modelPath: _classifierPath, task: YOLOTask.classify, useGpu: true);
     await _classifier!.loadModel();
   }
 
   Future<void> _loadAbnormalityModel(BonePart part) async {
     if (_loadedBonePart == part && _abnormalityModel != null) return;
-    _abnormalityModel = YOLO(modelPath: part.assetPath, task: YOLOTask.classify, useGpu: false);
+    _abnormalityModel = YOLO(modelPath: part.assetPath, task: YOLOTask.classify, useGpu: true);
     await _abnormalityModel!.loadModel();
     _loadedBonePart = part;
   }
@@ -46,16 +47,17 @@ class ModelProcessor {
     final imageBytes = await imageFile.readAsBytes();
     final results = await _classifier!.predict(imageBytes);
 
-    final raw = (results['classifications'] as List<dynamic>?) ?? [];
-    final predictions =
-        raw
-            .map<BonePrediction>(
-              (c) => BonePrediction(
-                bonePart: (c['label'] as String?) ?? '',
-                confidence: (c['confidence'] as num).toDouble(),
-              ),
-            )
-            .toList();
+    final raw = (results['detections'] as List<dynamic>?) ?? [];
+    final predictions = raw.map<BonePrediction>((d) {
+      final idx = (d['classIndex'] as num).toInt();
+      final bonePart = idx < BonePart.values.length
+          ? BonePart.values[idx].name
+          : 'unknown';
+      return BonePrediction(
+        bonePart: bonePart,
+        confidence: (d['confidence'] as num).toDouble(),
+      );
+    }).toList();
 
     predictions.sort((a, b) => b.confidence.compareTo(a.confidence));
     return predictions;
@@ -71,20 +73,16 @@ class ModelProcessor {
     final imageBytes = await imageFile.readAsBytes();
     final results = await _abnormalityModel!.predict(imageBytes);
 
-    final raw = (results['classifications'] as List<dynamic>?) ?? [];
+    final raw = (results['detections'] as List<dynamic>?) ?? [];
+    if (raw.isEmpty) return {'hasAbnormality': false, 'confidence': 0.0};
 
-    // Labels expected from MURA-trained model: 'positive' (abnormal) / 'negative' (normal)
-    final abnormal = raw.firstWhere(
-      (c) {
-        final label = (c['label'] as String).toLowerCase();
-        return label.contains('positive') || label.contains('abnormal');
-      },
-      orElse: () => {'label': 'negative', 'confidence': 0.0},
-    );
+    final top = raw.first;
+    final classIndex = (top['classIndex'] as num).toInt();
+    final confidence = (top['confidence'] as num).toDouble();
 
-    final confidence = (abnormal['confidence'] as num).toDouble();
+    // MURA convention: class 1 = positive (abnormal), class 0 = negative (normal)
     return {
-      'hasAbnormality': confidence >= 0.5,
+      'hasAbnormality': classIndex == 1,
       'confidence': confidence,
     };
   }
@@ -103,7 +101,7 @@ class ModelProcessor {
 
     // Stage 2
     final abnormality = await detectAbnormality(imageFile, bonePart);
-
+    log('Top bone part: ${predictions.isNotEmpty ? predictions.first.bonePart : "none"}');
     return ScanResult(
       generatedImageUrls: [], // filled later by DatabaseService.attachAIResultToScan
       topPredictions: predictions.take(3).toList(),
