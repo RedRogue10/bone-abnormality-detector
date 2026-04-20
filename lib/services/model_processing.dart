@@ -27,13 +27,13 @@ class ModelProcessor {
   // Initialization 
 
   Future<void> initClassifier() async {
-    _classifier = YOLO(modelPath: _classifierPath, task: YOLOTask.classify);
+    _classifier = YOLO(modelPath: _classifierPath, task: YOLOTask.classify, useGpu: false);
     await _classifier!.loadModel();
   }
 
   Future<void> _loadAbnormalityModel(BonePart part) async {
     if (_loadedBonePart == part && _abnormalityModel != null) return;
-    _abnormalityModel = YOLO(modelPath: part.assetPath, task: YOLOTask.classify);
+    _abnormalityModel = YOLO(modelPath: part.assetPath, task: YOLOTask.classify, useGpu: false);
     await _abnormalityModel!.loadModel();
     _loadedBonePart = part;
   }
