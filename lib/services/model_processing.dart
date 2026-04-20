@@ -34,7 +34,7 @@ class ModelProcessor {
 
   Future<void> _loadAbnormalityModel(BonePart part) async {
     if (_loadedBonePart == part && _abnormalityModel != null) return;
-    _abnormalityModel = YOLO(modelPath: part.assetPath, task: YOLOTask.classify, useGpu: true);
+    _abnormalityModel = YOLO(modelPath: part.assetPath, task: YOLOTask.detect, useGpu: true);
     await _abnormalityModel!.loadModel();
     _loadedBonePart = part;
   }
@@ -74,16 +74,18 @@ class ModelProcessor {
     final results = await _abnormalityModel!.predict(imageBytes);
 
     final raw = (results['detections'] as List<dynamic>?) ?? [];
+
+    // With a detection model, any returned detection = abnormality found.
+    // No detections = normal.
     if (raw.isEmpty) return {'hasAbnormality': false, 'confidence': 0.0};
 
-    final top = raw.first;
-    final classIndex = (top['classIndex'] as num).toInt();
-    final confidence = (top['confidence'] as num).toDouble();
+    final topConfidence = raw
+        .map((d) => (d['confidence'] as num).toDouble())
+        .reduce((a, b) => a > b ? a : b);
 
-    // MURA convention: class 1 = positive (abnormal), class 0 = negative (normal)
     return {
-      'hasAbnormality': classIndex == 1,
-      'confidence': confidence,
+      'hasAbnormality': true,
+      'confidence': topConfidence,
     };
   }
 
@@ -101,7 +103,8 @@ class ModelProcessor {
 
     // Stage 2
     final abnormality = await detectAbnormality(imageFile, bonePart);
-    log('Top bone part: ${predictions.isNotEmpty ? predictions.first.bonePart : "none"}');
+    log('[Classifier] bone=${predictions.isNotEmpty ? predictions.first.bonePart : "none"} conf=${predictions.isNotEmpty ? predictions.first.confidence : 0.0}');
+    log('[Abnormality] hasAbnormality=${abnormality['hasAbnormality']} conf=${abnormality['confidence']}');
     return ScanResult(
       generatedImageUrls: [], // filled later by DatabaseService.attachAIResultToScan
       topPredictions: predictions.take(3).toList(),
