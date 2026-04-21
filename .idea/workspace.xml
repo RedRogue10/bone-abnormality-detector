@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/services/model_processing.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/model_processing.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
