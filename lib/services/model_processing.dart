@@ -25,25 +25,22 @@ class ModelProcessor {
   YOLO? _abnormalityModel;
   BonePart? _loadedBonePart;
 
-  // Initialization 
-
-  Future<void> initClassifier() async {
-    _classifier = YOLO(modelPath: _classifierPath, task: YOLOTask.classify, useGpu: true);
+  Future<void> _initClassifier() async {
+    _classifier = YOLO(modelPath: _classifierPath, task: YOLOTask.classify, useGpu: true, useMultiInstance: true);
     await _classifier!.loadModel();
   }
 
-  Future<void> _loadAbnormalityModel(BonePart part) async {
+  Future<void> _initAbnormalityModel(BonePart part) async {
     if (_loadedBonePart == part && _abnormalityModel != null) return;
-    _abnormalityModel = YOLO(modelPath: part.assetPath, task: YOLOTask.detect, useGpu: true);
+    _abnormalityModel = YOLO(modelPath: part.assetPath, task: YOLOTask.classify, useGpu: true, useMultiInstance: true);
     await _abnormalityModel!.loadModel();
     _loadedBonePart = part;
   }
 
-  // Stage 1 – bone-part classification
+  // ── Stage 1 – bone-part classification ──────────────────────────────────
 
-  /// Runs the single classifier across all 7 bone parts and returns predictions
   Future<List<BonePrediction>> classifyBonePart(File imageFile) async {
-    if (_classifier == null) await initClassifier();
+    if (_classifier == null) await _initClassifier();
     final imageBytes = await imageFile.readAsBytes();
     final results = await _classifier!.predict(imageBytes);
 
@@ -63,50 +60,49 @@ class ModelProcessor {
     return predictions;
   }
 
-  // Stage 2 – bone-specific abnormality detection 
+  // ── Stage 2 – bone-specific abnormality classification ───────────────────
 
   Future<Map<String, dynamic>> detectAbnormality(
     File imageFile,
     BonePart part,
   ) async {
-    await _loadAbnormalityModel(part);
+    await _initAbnormalityModel(part);
     final imageBytes = await imageFile.readAsBytes();
     final results = await _abnormalityModel!.predict(imageBytes);
 
     final raw = (results['detections'] as List<dynamic>?) ?? [];
-
-    // With a detection model, any returned detection = abnormality found.
-    // No detections = normal.
     if (raw.isEmpty) return {'hasAbnormality': false, 'confidence': 0.0};
 
-    final topConfidence = raw
-        .map((d) => (d['confidence'] as num).toDouble())
-        .reduce((a, b) => a > b ? a : b);
+    final top = raw.first;
+    final classIndex = (top['classIndex'] as num).toInt();
+    final confidence = (top['confidence'] as num).toDouble();
 
+    // MURA convention: class 1 = positive (abnormal), class 0 = negative (normal)
     return {
-      'hasAbnormality': true,
-      'confidence': topConfidence,
+      'hasAbnormality': classIndex == 1,
+      'confidence': confidence,
     };
   }
 
+  // ── Full pipeline ────────────────────────────────────────────────────────
 
   Future<ScanResult> analyzeImage(File imageFile) async {
-    // Stage 1
     final predictions = await classifyBonePart(imageFile);
 
     final topLabel =
         predictions.isNotEmpty ? predictions.first.bonePart.toLowerCase() : '';
     final bonePart = BonePart.values.firstWhere(
       (b) => topLabel.contains(b.name),
-      orElse: () => BonePart.wrist, // fallback; should not happen in practice
+      orElse: () => BonePart.wrist,
     );
 
-    // Stage 2
     final abnormality = await detectAbnormality(imageFile, bonePart);
+
     log('[Classifier] bone=${predictions.isNotEmpty ? predictions.first.bonePart : "none"} conf=${predictions.isNotEmpty ? predictions.first.confidence : 0.0}');
     log('[Abnormality] hasAbnormality=${abnormality['hasAbnormality']} conf=${abnormality['confidence']}');
+
     return ScanResult(
-      generatedImageUrls: [], // filled later by DatabaseService.attachAIResultToScan
+      generatedImageUrls: [],
       topPredictions: predictions.take(3).toList(),
       hasAbnormality: abnormality['hasAbnormality'] as bool,
       abnormalityConfidence: abnormality['confidence'] as double,
