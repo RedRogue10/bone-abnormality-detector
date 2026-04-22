@@ -35,14 +35,7 @@ class _PatientListPageState extends State<PatientListPage> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
-  // Patient Data
-  List<Patient> _patients = [];
-  bool _isLoading = true;
-
-  List<Patient> get _filteredPatients {
-    List<Patient> list = List.from(_patients);
-
-    // Filter by search
+  List<Patient> _applyFilters(List<Patient> list) {
     if (_searchQuery.isNotEmpty) {
       list = list
           .where(
@@ -52,7 +45,6 @@ class _PatientListPageState extends State<PatientListPage> {
           .toList();
     }
 
-    // Sort
     if (_selectedSort == 'Name (A-Z)') {
       list.sort((a, b) => a.fullName.compareTo(b.fullName));
     } else if (_selectedSort == 'Age') {
@@ -60,27 +52,6 @@ class _PatientListPageState extends State<PatientListPage> {
     }
 
     return list;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPatients();
-  }
-
-  Future<void> _loadPatients() async {
-    try {
-      final patients = await DatabaseService().getPatients();
-      setState(() {
-        _patients = patients;
-        _isLoading = false;
-      });
-    } catch (e) {
-      // Handle error, maybe show a snackbar
-      setState(() {
-        _isLoading = false;
-      });
-    }
   }
 
   @override
@@ -105,8 +76,8 @@ class _PatientListPageState extends State<PatientListPage> {
           backgroundColor: darkNavy,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.menu, color: white),
-            onPressed: () {},
+            icon: const Icon(Icons.chevron_left, color: white),
+            onPressed: () => Navigator.pop(context),
           ),
           title: Text(
             'Patient List',
@@ -129,11 +100,18 @@ class _PatientListPageState extends State<PatientListPage> {
               child: IconButton(
                 icon: const Icon(Icons.add, color: white, size: 20),
                 constraints: const BoxConstraints(),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const AddPatientPage()),
                   );
+                  if (result == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Patient successfully added"),
+                      ),
+                    );
+                  }
                 },
               ),
             ),
@@ -153,7 +131,17 @@ class _PatientListPageState extends State<PatientListPage> {
                   const SizedBox(height: 16),
 
                   // Recent / pinned patient card
-                  if (_patients.isNotEmpty) _buildRecentCard(_patients.first),
+                  StreamBuilder<List<Patient>>(
+                    stream: DatabaseService().getPatientsStream(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const SizedBox();
+                      }
+
+                      final patients = snapshot.data!;
+                      return _buildRecentCard(patients.last);
+                    },
+                  ),
                   const SizedBox(height: 20),
 
                   // "All Patients" header + Sort button
@@ -175,15 +163,32 @@ class _PatientListPageState extends State<PatientListPage> {
 
                   // Patient list
                   Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : ListView.separated(
-                            itemCount: _filteredPatients.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 10),
-                            itemBuilder: (context, index) =>
-                                _buildPatientCard(_filteredPatients[index]),
-                          ),
+                    child: StreamBuilder<List<Patient>>(
+                      stream: DatabaseService().getPatientsStream(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Center(child: Text("No patients found"));
+                        }
+
+                        final patients = snapshot.data!;
+                        final filtered = _applyFilters(patients);
+
+                        return ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) =>
+                              _buildPatientCard(filtered[index]),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),

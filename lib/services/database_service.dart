@@ -94,6 +94,12 @@ class DatabaseService {
     }
   }
 
+  Stream<List<Patient>> getPatientsStream() {
+    return _getPatientCollectionRef.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    });
+  }
+
   Future<void> updatePatient(Patient patient) async {
     try {
       await _getPatientCollectionRef.doc(patient.id).update(patient.toMap());
