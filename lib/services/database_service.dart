@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../models/user.dart';
 import '../models/patient.dart';
 import '../models/xray_scan.dart';
 import '../models/scan_result.dart';
@@ -27,6 +28,38 @@ class DatabaseService {
               Patient.fromMap(snapshots.data()!, snapshots.id),
           toFirestore: (patient, _) => patient.toMap(),
         );
+  }
+
+  Future<UserModel> getUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (!doc.exists) {
+      throw Exception('User not found');
+    }
+
+    return UserModel.fromMap(doc.data()!, doc.id);
+  }
+
+  Future<void> updateUserProfile({
+    required String firstName,
+    required String lastName,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser!;
+
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      'firstName': firstName,
+      'lastName': lastName,
+      'updatedAt': Timestamp.now(),
+    });
   }
 
   // ------------------- PATIENTS ----------------------

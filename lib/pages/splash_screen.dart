@@ -11,9 +11,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  static const Color darkNavy      = Color(0xFF0B2545);
-  static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color white       = Colors.white;
+  static const Color darkNavy = Color(0xFF0B2545);
+  static const Color white = Colors.white;
 
   @override
   Widget build(BuildContext context) {
@@ -67,9 +66,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => const LoginPage(),
-                    ),
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
                 },
                 child: Container(
@@ -80,10 +77,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     gradient: const LinearGradient(
                       begin: Alignment.centerLeft,
                       end: Alignment.centerRight,
-                      colors: [
-                        Color(0xFF1A73E9),
-                        Color(0xFF0D3A8A),
-                      ],
+                      colors: [Color(0xFF1A73E9), Color(0xFF0D3A8A)],
                     ),
                   ),
                   alignment: Alignment.center,
@@ -106,12 +100,12 @@ class _SplashScreenState extends State<SplashScreen> {
                 height: 52,
                 child: OutlinedButton(
                   onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SignupPage(),
-                    ),
-                  );
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SignupPage(),
+                      ),
+                    );
                   },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: white, width: 1.5),

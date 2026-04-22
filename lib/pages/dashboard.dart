@@ -1,9 +1,13 @@
 import 'package:bone_abnormality_detector/main.dart';
+import 'package:bone_abnormality_detector/services/auth.dart';
+// import 'package:bone_abnormality_detector/services/database_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'patient_list.dart';
+import 'info_screen.dart';
+import '../pages/doctor_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -42,6 +46,16 @@ class _DashboardPageState extends State<DashboardPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _syncEmail();
+  }
+
+  Future<void> _syncEmail() async {
+    await Auth().syncEmailIfChanged();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: white,
@@ -50,11 +64,11 @@ class _DashboardPageState extends State<DashboardPage> {
         backgroundColor: darkNavy,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: white),
+          icon: const Icon(Icons.account_circle_outlined, color: white),
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const HomePage()),
+              MaterialPageRoute(builder: (_) => DoctorPage(userId: user!.uid)),
             );
           },
         ),
@@ -65,8 +79,13 @@ class _DashboardPageState extends State<DashboardPage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: white),
-            onPressed: () {},
+            icon: const Icon(Icons.info_outline_rounded, color: white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InfoScreen()),
+              );
+            },
           ),
         ],
       ),
@@ -80,6 +99,16 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // TEMPORARY BUTTON
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HomePage()),
+                      );
+                    },
+                    child: Text("Testing buttons"),
+                  ),
                   // SCAN AN IMAGE
                   _buildScanButton(context),
                   const SizedBox(height: 16),
