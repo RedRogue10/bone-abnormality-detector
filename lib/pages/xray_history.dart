@@ -1,9 +1,14 @@
+import 'package:bone_abnormality_detector/pages/info_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:bone_abnormality_detector/pages/xray_info.dart';
+import '../services/database_service.dart';
+import '../models/xray_scan.dart';
+import '../models/patient.dart';
+import 'package:intl/intl.dart';
 
 class XrayHistory extends StatefulWidget {
-  final int patientId;
+  final String patientId;
 
   const XrayHistory({super.key, required this.patientId});
 
@@ -18,40 +23,34 @@ class _XrayHistoryState extends State<XrayHistory> {
   static const Color grey = Color(0xFF808080);
   static const Color white = Colors.white;
 
-  final List<Map<String, String>> xrayItems = [
-    {
-      'name': 'Humerus X-ray',
-      'date': 'Apr 10, 2026',
-      'id': 'Scan #001',
-      'image': 'assets/images/xray_background.png',
-    },
-    {
-      'name': 'Elbow X-ray',
-      'date': 'Mar 22, 2026',
-      'id': 'Scan #002',
-      'image': 'assets/images/xray_background.png',
-    },
-    {
-      'name': 'Finger X-ray',
-      'date': 'Feb 15, 2026',
-      'id': 'Scan #003',
-      'image': 'assets/images/xray_background.png',
-    },
-    {
-      'name': 'Humerus X-ray',
-      'date': 'Apr 10, 2026',
-      'id': 'Scan #001',
-      'image': 'assets/images/xray_background.png',
-    },
-    {
-      'name': 'Elbow X-ray',
-      'date': 'Mar 22, 2026',
-      'id': 'Scan #002',
-      'image': 'assets/images/xray_background.png',
-    },
-  ];
+  Patient? _patient;
 
-  Widget _buildXrayButton(Map<String, String> item) {
+  @override
+  void initState() {
+    super.initState();
+    _loadPatient();
+  }
+
+  String formatDate(DateTime date) {
+    return DateFormat('MMMM d, y hh:mm a').format(date);
+  }
+
+  Future<void> _loadPatient() async {
+    try {
+      Patient patient = await DatabaseService().getPatientById(
+        widget.patientId,
+      );
+      setState(() {
+        _patient = patient;
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load patient data: $e')),
+      );
+    }
+  }
+
+  Widget _buildScanButton(XrayScan scan) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: SizedBox(
@@ -66,7 +65,7 @@ class _XrayHistoryState extends State<XrayHistory> {
                 context,
                 MaterialPageRoute(
                   builder: (_) =>
-                      XrayInfo(xrayId: int.parse(item['id']!.split('#')[1])),
+                      XrayInfo(patientId: widget.patientId, scanId: scan.id),
                 ),
               );
             },
@@ -74,25 +73,25 @@ class _XrayHistoryState extends State<XrayHistory> {
             child: Container(
               padding: const EdgeInsets.only(left: 0, right: 16),
               decoration: BoxDecoration(
-                color: white,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(16),
                       bottomLeft: Radius.circular(16),
                     ),
-                    child: Image.asset(
-                      item['image'] ?? '',
+                    child: Image.network(
+                      scan.imageUrl,
                       width: 120,
-                      height: double.infinity, // Full height now
+                      height: double.infinity,
                       fit: BoxFit.cover,
                     ),
                   ),
                   const SizedBox(width: 12),
+
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -101,24 +100,23 @@ class _XrayHistoryState extends State<XrayHistory> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            item['name'] ?? '',
+                            "X-ray Scan",
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               color: primaryBlue,
-                              letterSpacing: 0.5,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            item['date'] ?? '',
+                            formatDate(scan.createdAt),
                             style: GoogleFonts.poppins(
                               fontSize: 14,
-                              color: Colors.black.withOpacity(0.85),
+                              color: Colors.black87,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            item['id'] ?? '',
+                            "Scan ID: ${scan.id}",
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontStyle: FontStyle.italic,
@@ -129,7 +127,7 @@ class _XrayHistoryState extends State<XrayHistory> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+
                   const Icon(
                     Icons.arrow_forward_ios_rounded,
                     color: Colors.black,
@@ -168,15 +166,16 @@ class _XrayHistoryState extends State<XrayHistory> {
             margin: const EdgeInsets.only(right: 12),
 
             child: IconButton(
-              icon: const Icon(Icons.person_rounded, color: white, size: 22),
+              icon: const Icon(
+                Icons.info_outline_rounded,
+                color: white,
+                size: 22,
+              ),
               onPressed: () {
-                // Navigator.push(
-                //   context,
-                //   MaterialPageRoute(
-                //     builder: (_) =>
-                //         Null, // Replace with Doctor's profile() when implemented,
-                //   ),
-                // );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => InfoScreen()),
+                );
               },
             ),
           ),
@@ -194,8 +193,8 @@ class _XrayHistoryState extends State<XrayHistory> {
                     CircleAvatar(
                       backgroundColor: primaryBlue,
                       minRadius: 40.0,
-                      child: const Text(
-                        'JC',
+                      child: Text(
+                        _patient?.initials ?? '',
                         style: TextStyle(
                           color: white,
                           fontWeight: FontWeight.bold,
@@ -208,21 +207,21 @@ class _XrayHistoryState extends State<XrayHistory> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Juan Dela Cruz',
+                          _patient?.fullName ?? '',
                           style: GoogleFonts.inter(
                             color: primaryBlue,
                             fontSize: 18,
                           ),
                         ),
                         Text(
-                          '33 Years Old',
+                          "${_patient?.age ?? ''} years old",
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             color: Colors.black87,
                           ),
                         ),
                         Text(
-                          'Male',
+                          _patient?.sex ?? '',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             color: Colors.black87,
@@ -233,7 +232,26 @@ class _XrayHistoryState extends State<XrayHistory> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                ...xrayItems.map(_buildXrayButton).toList(),
+                StreamBuilder<List<XrayScan>>(
+                  stream: DatabaseService().getPatientScansStream(
+                    widget.patientId,
+                  ),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final scans = snapshot.data!;
+
+                    if (scans.isEmpty) {
+                      return const Center(child: Text("No scans found"));
+                    }
+
+                    return Column(
+                      children: scans.map(_buildScanButton).toList(),
+                    );
+                  },
+                ),
               ],
             ),
           ),

@@ -87,8 +87,6 @@ class _DoctorPageState extends State<DoctorPage> {
                                   style: GoogleFonts.oswald(
                                     color: Colors.white,
                                     fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.5,
                                   ),
                                 ),
                               ),

@@ -30,10 +30,17 @@ class _PatientListPageState extends State<PatientListPage> {
   static const List<String> _sortOptions = ['Name (A-Z)', 'Age', 'Date added'];
   String _selectedSort = 'Name (A-Z)';
   bool _showSortDropdown = false;
+  late final Stream<List<Patient>> _patientStream;
 
   // Search
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _patientStream = DatabaseService().getPatientsStream();
+  }
 
   List<Patient> _applyFilters(List<Patient> list) {
     if (_searchQuery.isNotEmpty) {
@@ -132,7 +139,7 @@ class _PatientListPageState extends State<PatientListPage> {
 
                   // Recent / pinned patient card
                   StreamBuilder<List<Patient>>(
-                    stream: DatabaseService().getPatientsStream(),
+                    stream: _patientStream,
                     builder: (context, snapshot) {
                       if (!snapshot.hasData || snapshot.data!.isEmpty) {
                         return const SizedBox();
@@ -164,7 +171,7 @@ class _PatientListPageState extends State<PatientListPage> {
                   // Patient list
                   Expanded(
                     child: StreamBuilder<List<Patient>>(
-                      stream: DatabaseService().getPatientsStream(),
+                      stream: _patientStream,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                             ConnectionState.waiting) {

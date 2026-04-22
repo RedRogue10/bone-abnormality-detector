@@ -8,21 +8,16 @@ import 'package:image_picker/image_picker.dart';
 
 import 'pages/dashboard.dart';
 import 'pages/patient_list.dart';
-import 'pages/add_patient.dart';
 import 'pages/xray_result.dart';
 import 'pages/camera_capture.dart';
-import 'pages/edit_patient.dart';
-// import 'pages/doctor_page.dart';
-import 'pages/info_screen.dart';
 import 'pages/splash_screen.dart';
 import 'pages/reset_password.dart';
+import 'pages/login.dart';
 
 import 'services/database_service.dart';
 
 import 'models/bone_prediction.dart';
 import 'models/scan_result.dart';
-
-import 'pages/login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -72,7 +67,7 @@ class HomePage extends StatelessWidget {
 
   Future<void> _testAddScan() async {
     try {
-      await DatabaseService().createXrayScan(patientId: 'HJHqZYdXkaO5Id5KQCXq');
+      await DatabaseService().createXrayScan(patientId: 'FmnTTC426eN34O1mhSta');
 
       print('Test scan added successfully!');
     } catch (e) {
@@ -108,7 +103,7 @@ class HomePage extends StatelessWidget {
 
       // call pipeline
       final scanId = await DatabaseService().createFullXrayScan(
-        patientId: 'HJHqZYdXkaO5Id5KQCXq',
+        patientId: 'FmnTTC426eN34O1mhSta',
         imageFile: file,
       );
 
@@ -132,8 +127,8 @@ class HomePage extends StatelessWidget {
     );
 
     await DatabaseService().updateXrayScanResult(
-      patientId: 'HJHqZYdXkaO5Id5KQCXq',
-      scanId: "0p0DU4rimcY9uNm76jR1",
+      patientId: 'FmnTTC426eN34O1mhSta',
+      scanId: "i1tyaiyv904tPBj6DS1R",
       result: result,
     );
 
@@ -209,36 +204,6 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Add Patient button
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AddPatientPage()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Go to Add Patient',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
               // Results Page button
               ElevatedButton(
                 onPressed: () {
@@ -292,39 +257,6 @@ class HomePage extends StatelessWidget {
                 ),
                 child: const Text(
                   'Go to Camera Page',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const EditPatientPage(
-                        patientId: 'HJHqZYdXkaO5Id5KQCXq',
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Edit Patient Info',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -429,36 +361,6 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(builder: (_) => const DoctorPage(userId)),
-                  // );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Go to Doctor Page',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const SizedBox(height: 16),
 
               // Information Page button
               const SizedBox(height: 16),
@@ -490,35 +392,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const InfoScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Go to Info Screen',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
+
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {

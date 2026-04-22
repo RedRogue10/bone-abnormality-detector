@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'edit_patient.dart';
 import '../services/database_service.dart';
 import '../models/patient.dart';
+import '../pages/xray_history.dart';
+import '../pages/info_screen.dart';
 
 class PatientInfoScreen extends StatefulWidget {
   final String patientId;
@@ -20,9 +22,8 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
   static const Color grey = Color(0xFF808080);
   static const Color white = Colors.white;
 
-  // Replace with actual check from database
-  bool hasXrayHistory = true;
   Patient? _patient;
+  bool _hasXrayHistory = false;
 
   @override
   void initState() {
@@ -35,13 +36,13 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
       Patient patient = await DatabaseService().getPatientById(
         widget.patientId,
       );
+      final hasXray = await DatabaseService().hasXrayHistory(widget.patientId);
+
       setState(() {
         _patient = patient;
-        // _historyRecords = patient.historyRecords;
-        // hasXrayHistory = patient.xrayHistory.isNotEmpty;
+        _hasXrayHistory = hasXray;
       });
     } catch (e) {
-      // Handle error, e.g. show a snackbar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load patient data: $e')),
       );
@@ -138,15 +139,16 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
             margin: const EdgeInsets.only(right: 12),
 
             child: IconButton(
-              icon: const Icon(Icons.person_rounded, color: white, size: 22),
+              icon: const Icon(
+                Icons.info_outline_rounded,
+                color: white,
+                size: 22,
+              ),
               onPressed: () {
-                // Navigator.push(
-                //   context,
-                //   MaterialPageRoute(
-                //     builder: (_) =>
-                //         Null, // Replace with Doctor's profile() when implemented,
-                //   ),
-                // );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => InfoScreen()),
+                );
               },
             ),
           ),
@@ -183,8 +185,8 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                       CircleAvatar(
                         backgroundColor: primaryBlue,
                         minRadius: 40.0,
-                        child: const Text(
-                          'JC',
+                        child: Text(
+                          _patient?.initials ?? '',
                           style: TextStyle(
                             color: white,
                             fontWeight: FontWeight.bold,
@@ -379,20 +381,20 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                       const SizedBox(height: 16),
 
                       // -------------------- Xray History --------------------
-                      hasXrayHistory
+                      _hasXrayHistory
                           ? Material(
                               elevation: 4,
                               borderRadius: BorderRadius.circular(12),
                               child: InkWell(
                                 onTap: () {
-                                  // Navigator.push(
-                                  //   context,
-                                  //   MaterialPageRoute(
-                                  //     builder: (_) => XrayHistory(
-                                  //       patientId: widget.patientId,
-                                  //     ),
-                                  //   ),
-                                  // );
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => XrayHistory(
+                                        patientId: widget.patientId,
+                                      ),
+                                    ),
+                                  );
                                 },
                                 borderRadius: BorderRadius.circular(12),
                                 child: Container(

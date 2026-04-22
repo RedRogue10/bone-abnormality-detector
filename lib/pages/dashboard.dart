@@ -1,13 +1,18 @@
+import 'package:flutter/material.dart';
 import 'package:bone_abnormality_detector/main.dart';
-import 'package:bone_abnormality_detector/services/auth.dart';
-// import 'package:bone_abnormality_detector/services/database_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+// SERVICES
+import 'package:bone_abnormality_detector/services/auth.dart';
+
+// PAGES
 import 'patient_list.dart';
 import 'info_screen.dart';
 import '../pages/doctor_page.dart';
+import '../pages/camera_capture.dart';
+import '../pages/recent_scans.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -136,7 +141,12 @@ class _DashboardPageState extends State<DashboardPage> {
                           icon: Icons.document_scanner_outlined,
                           label: 'RECENT SCANS',
                           onTap: () {
-                            // TODO: Navigator.push → RecentScansPage
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RecentScansPage(),
+                              ),
+                            );
                           },
                         ),
                       ),
@@ -210,12 +220,10 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _buildScanButton(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // TODO: Navigator.push → ScanPage
-        // Temporary to check firebase
-        String text = "Scanned XRAY at ${DateTime.now()}";
-        print('Action: $text');
-        db.collection('scans').add({'timestamp': DateTime.now(), 'text': text});
-        print("Current user: ${user?.email ?? 'No user logged in'}");
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CameraCapturePage()),
+        );
       },
       child: Container(
         width: double.infinity,
@@ -348,7 +356,10 @@ class _DashboardPageState extends State<DashboardPage> {
           child: Center(
             child: GestureDetector(
               onTap: () {
-                // TODO: Navigator.push → ScanPage
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CameraCapturePage()),
+                );
               },
               child: Container(
                 width: 68,

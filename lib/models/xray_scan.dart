@@ -21,12 +21,16 @@ class XrayScan {
       'imageUrl': imageUrl,
       'createdAt': createdAt,
       'analysisStatus': analysisStatus,
-      'result': result,
+      'result': result?.toMap(),
     };
   }
 
   // READ FROM FIRESTORE
-  factory XrayScan.fromMap(Map<String, dynamic> map, String id) {
+  factory XrayScan.fromMap(
+    Map<String, dynamic> map,
+    String id, {
+    String? patientIdFromPath,
+  }) {
     return XrayScan(
       id: id,
       imageUrl: map['imageUrl'],

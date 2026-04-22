@@ -65,7 +65,6 @@ class Auth {
 
     await user.reauthenticateWithCredential(credential);
     await user.verifyBeforeUpdateEmail(newEmail);
-
   }
 
   Future<void> updatePassword({
@@ -96,6 +95,14 @@ class Auth {
 
     if (doc['email'] != authEmail) {
       await doc.reference.update({'email': authEmail});
+    }
+  }
+
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.message);
     }
   }
 }

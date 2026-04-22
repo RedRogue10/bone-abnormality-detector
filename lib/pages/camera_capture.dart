@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:camera/camera.dart';
+import 'info_screen.dart';
 
 class CameraCapturePage extends StatefulWidget {
   const CameraCapturePage({super.key});
@@ -11,7 +12,7 @@ class CameraCapturePage extends StatefulWidget {
 
 class _CameraCapturePageState extends State<CameraCapturePage> {
   static const Color darkNavy = Color(0xFF0B2545);
-  static const Color white    = Colors.white;
+  static const Color white = Colors.white;
 
   CameraController? _controller;
   List<CameraDescription> _cameras = [];
@@ -70,23 +71,23 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
         backgroundColor: darkNavy,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: white),
-          onPressed: () {},
+          icon: const Icon(Icons.chevron_left, color: white),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'CAMERA',
-          style: GoogleFonts.oswald(
-            color: white,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-            letterSpacing: 2,
-          ),
+          style: GoogleFonts.oswald(color: white, fontSize: 20),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: white),
-            onPressed: () {},
+            icon: const Icon(Icons.info_outline_rounded, color: white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const InfoScreen()),
+              );
+            },
           ),
         ],
       ),
@@ -95,9 +96,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
           Expanded(
             child: _isInitialized && _controller != null
                 ? CameraPreview(_controller!)
-                : const Center(
-                    child: CircularProgressIndicator(color: white),
-                  ),
+                : const Center(child: CircularProgressIndicator(color: white)),
           ),
           _buildBottomBar(),
         ],
@@ -141,7 +140,11 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
           ),
           // Flip camera
           IconButton(
-            icon: const Icon(Icons.flip_camera_ios_outlined, color: white, size: 30),
+            icon: const Icon(
+              Icons.flip_camera_ios_outlined,
+              color: white,
+              size: 30,
+            ),
             onPressed: _flipCamera,
           ),
         ],
