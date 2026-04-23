@@ -5,9 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:speedometer_chart/speedometer_chart.dart';
 
 class XrayInfo extends StatefulWidget {
-  final int xrayId;
+  final String patientId;
+  final String scanId;
 
-  const XrayInfo({super.key, required this.xrayId});
+  const XrayInfo({super.key, required this.patientId, required this.scanId});
 
   @override
   State<XrayInfo> createState() => _XrayInfoState();

@@ -1,27 +1,55 @@
+import 'package:bone_abnormality_detector/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'edit_doctor_info.dart';
+import '../services/database_service.dart';
+import 'package:bone_abnormality_detector/services/auth.dart';
 
 class DoctorPage extends StatefulWidget {
-  const DoctorPage({super.key});
+  final String userId;
+  const DoctorPage({super.key, required this.userId});
 
   @override
   State<DoctorPage> createState() => _DoctorPageState();
 }
 
 class _DoctorPageState extends State<DoctorPage> {
-  static const Color darkNavy    = Color(0xFF0B2545);
+  UserModel? user;
+  bool isLoading = true;
+  String firstName = '';
+  String lastName = '';
+  String email = '';
+
+  static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
 
-  String firstName = 'Luz';
-  String lastName  = 'Reyes';
-  String email     = 'LuzReyes8@gmail.com';
-  String password  = 'mypassword123';
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
 
-  String get fullName => '$firstName $lastName';
+  Future<void> _loadUser() async {
+    try {
+      await Auth().syncEmailIfChanged();
+      final data = await DatabaseService().getUserData();
+
+      setState(() {
+        user = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+      print("Error loading user: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -39,12 +67,17 @@ class _DoctorPageState extends State<DoctorPage> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 8),
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
                         child: Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.chevron_left,
-                                  color: Colors.white, size: 28),
+                              icon: const Icon(
+                                Icons.chevron_left,
+                                color: Colors.white,
+                                size: 28,
+                              ),
                               onPressed: () => Navigator.pop(context),
                             ),
                             Expanded(
@@ -54,8 +87,6 @@ class _DoctorPageState extends State<DoctorPage> {
                                   style: GoogleFonts.oswald(
                                     color: Colors.white,
                                     fontSize: 20,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 1.5,
                                   ),
                                 ),
                               ),
@@ -66,20 +97,18 @@ class _DoctorPageState extends State<DoctorPage> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => EditDoctorInfoPage(
-                                      firstName: firstName,
-                                      lastName:  lastName,
-                                      email:     email,
-                                      password:  password,
+                                      userId: widget.userId,
                                     ),
                                   ),
                                 );
-                                if (result != null && result is Map) {
-                                  setState(() {
-                                    firstName = result['firstName'] ?? firstName;
-                                    lastName  = result['lastName']  ?? lastName;
-                                    email     = result['email']     ?? email;
-                                    password  = result['password']  ?? password;
-                                  });
+                                if (result == true) {
+                                  _loadUser();
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Profile updated"),
+                                    ),
+                                  );
                                 }
                               },
                               style: ElevatedButton.styleFrom(
@@ -87,16 +116,19 @@ class _DoctorPageState extends State<DoctorPage> {
                                 foregroundColor: Colors.white,
                                 minimumSize: const Size(58, 32),
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 14),
+                                  horizontal: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20)),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
                                 elevation: 0,
                               ),
                               child: const Text(
                                 'EDIT',
                                 style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -120,11 +152,7 @@ class _DoctorPageState extends State<DoctorPage> {
                     color: const Color(0xFFD9DCE1),
                     border: Border.all(color: Colors.white, width: 3),
                   ),
-                  child: const Icon(
-                    Icons.person,
-                    size: 52,
-                    color: darkNavy,
-                  ),
+                  child: const Icon(Icons.person, size: 52, color: darkNavy),
                 ),
               ),
             ],
@@ -134,7 +162,7 @@ class _DoctorPageState extends State<DoctorPage> {
 
           // Doctor name
           Text(
-            fullName,
+            '${user?.firstName} ${user?.lastName}',
             style: const TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.bold,
@@ -150,27 +178,36 @@ class _DoctorPageState extends State<DoctorPage> {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  _infoRow('Name', fullName),
+                  _infoRow('Name', user?.fullName ?? ''),
                   _divider(),
                   _infoRow('Password', '••••••••••'),
                   _divider(),
-                  _infoRow('Email Address', email, isLink: true),
+                  _infoRow('Email Address', user?.email ?? '', isLink: true),
                   const Spacer(),
 
                   ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () async {
+                      await Auth().signOut();
+
+                      if (!context.mounted) return;
+
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
                     icon: const Icon(Icons.logout, size: 17),
                     label: const Text(
                       'Sign Out',
                       style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black87,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(160, 46),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                       elevation: 2,
                     ),
                   ),
@@ -208,9 +245,7 @@ class _DoctorPageState extends State<DoctorPage> {
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontSize: 13,
-                color: isLink
-                    ? const Color(0xFF1A73E9)
-                    : Colors.black45,
+                color: isLink ? const Color(0xFF1A73E9) : Colors.black45,
                 decoration: isLink
                     ? TextDecoration.underline
                     : TextDecoration.none,
