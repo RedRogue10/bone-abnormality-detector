@@ -12,23 +12,22 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  static const Color darkNavy    = Color(0xFF0B2545);
-  static const Color bgNavy      = Color(0xFF0B2545);
-  static const Color white       = Colors.white;
-  static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color hintGrey    = Color(0xFF8FA8C8);
+  static const Color darkNavy = Color(0xFF0B2545);
+  static const Color bgNavy = Color(0xFF0B2545);
+  static const Color white = Colors.white;
+  static const Color hintGrey = Color(0xFF8FA8C8);
   static const Color fieldBorder = Color(0xFFDDE6F0);
 
-  final Auth _auth           = Auth();
-  final _firstNameCtrl       = TextEditingController();
-  final _lastNameCtrl        = TextEditingController();
-  final _emailCtrl           = TextEditingController();
-  final _passwordCtrl        = TextEditingController();
-  final _confirmPassCtrl     = TextEditingController();
+  final Auth _auth = Auth();
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _confirmPassCtrl = TextEditingController();
 
-  bool _obscurePass          = true;
-  bool _obscureConfirm       = true;
-  bool _isLoading            = false;
+  bool _obscurePass = true;
+  bool _obscureConfirm = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -42,14 +41,17 @@ class _SignupPageState extends State<SignupPage> {
 
   Future<void> _register() async {
     final firstName = _firstNameCtrl.text.trim();
-    final lastName  = _lastNameCtrl.text.trim();
-    final email     = _emailCtrl.text.trim();
-    final password  = _passwordCtrl.text.trim();
-    final confirm   = _confirmPassCtrl.text.trim();
+    final lastName = _lastNameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text.trim();
+    final confirm = _confirmPassCtrl.text.trim();
 
     // Basic validation
-    if (firstName.isEmpty || lastName.isEmpty || email.isEmpty ||
-        password.isEmpty || confirm.isEmpty) {
+    if (firstName.isEmpty ||
+        lastName.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirm.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields.')),
       );
@@ -57,22 +59,25 @@ class _SignupPageState extends State<SignupPage> {
     }
 
     if (password != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match.')));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      await _auth.createUserWithEmailAndPassword(email, password);
+      await _auth.createUserWithEmailAndPassword(
+        firstName,
+        lastName,
+        email,
+        password,
+      );
 
       // Update the Firebase display name with first + last name
       final user = FirebaseAuth.instance.currentUser;
       await user?.updateDisplayName('$firstName $lastName');
-
-      // TODO: Save additional user info (firstName, lastName) to Firestore
 
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -81,9 +86,9 @@ class _SignupPageState extends State<SignupPage> {
       );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Signup Error: ${e.message}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Signup Error: ${e.message}')));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -152,8 +157,7 @@ class _SignupPageState extends State<SignupPage> {
                     color: darkNavy,
                     size: 20,
                   ),
-                  onPressed: () =>
-                      setState(() => _obscurePass = !_obscurePass),
+                  onPressed: () => setState(() => _obscurePass = !_obscurePass),
                 ),
               ),
               const SizedBox(height: 14),
@@ -183,7 +187,8 @@ class _SignupPageState extends State<SignupPage> {
                   style: GoogleFonts.poppins(color: hintGrey, fontSize: 12),
                   children: [
                     const TextSpan(
-                        text: 'By registering you are agreeing to our\n'),
+                      text: 'By registering you are agreeing to our\n',
+                    ),
                     TextSpan(
                       text: 'Terms of use and privacy policy.',
                       style: GoogleFonts.poppins(
@@ -297,8 +302,10 @@ class _SignupPageState extends State<SignupPage> {
           suffixIcon: suffixIcon,
           border: InputBorder.none,
           isDense: true,
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 16,
+            horizontal: 12,
+          ),
         ),
       ),
     );

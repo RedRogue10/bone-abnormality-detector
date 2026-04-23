@@ -1,72 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/database_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'auth/change_email_page.dart';
+import 'auth/change_password_page.dart';
+import 'package:bone_abnormality_detector/services/auth.dart';
 
 class EditDoctorInfoPage extends StatefulWidget {
-  final String firstName;
-  final String lastName;
-  final String email;
-  final String password;
+  final String userId;
 
-  const EditDoctorInfoPage({
-    super.key,
-    required this.firstName,
-    required this.lastName,
-    required this.email,
-    required this.password,
-  });
+  const EditDoctorInfoPage({super.key, required this.userId});
 
   @override
   State<EditDoctorInfoPage> createState() => _EditDoctorInfoPageState();
 }
 
 class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
-  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color fieldFill   = Color(0xFFEEF0F2);
+  static const Color fieldFill = Color(0xFFEEF0F2);
   static const Color fieldBorder = Color(0xFFCDD1D6);
 
-  late final TextEditingController _firstNameCtrl;
-  late final TextEditingController _lastNameCtrl;
-  late final TextEditingController _passwordCtrl;
-  late final TextEditingController _emailCtrl;
+  final _formKey = GlobalKey<FormState>();
+
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _firstNameCtrl = TextEditingController(text: widget.firstName);
-    _lastNameCtrl  = TextEditingController(text: widget.lastName);
-    _passwordCtrl  = TextEditingController(text: widget.password);
-    _emailCtrl     = TextEditingController(text: widget.email);
+    _loadUser();
   }
 
-  @override
-  void dispose() {
-    _firstNameCtrl.dispose();
-    _lastNameCtrl.dispose();
-    _passwordCtrl.dispose();
-    _emailCtrl.dispose();
-    super.dispose();
+  Future<void> _loadUser() async {
+    await Auth().syncEmailIfChanged();
+    final user = await DatabaseService().getUserData();
+
+    _firstNameCtrl.text = user.firstName;
+    _lastNameCtrl.text = user.lastName;
+
+    setState(() => isLoading = false);
   }
 
-  void _onUpdate() {
-    Navigator.pop(context, {
+  Future<void> _save() async {
+    final user = FirebaseAuth.instance.currentUser!;
+
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
       'firstName': _firstNameCtrl.text.trim(),
-      'lastName':  _lastNameCtrl.text.trim(),
-      'email':     _emailCtrl.text.trim(),
-      'password':  _passwordCtrl.text.trim(),
+      'lastName': _lastNameCtrl.text.trim(),
+      'updatedAt': Timestamp.now(),
     });
+
+    if (!context.mounted) return;
+
+    Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final displayName = '${widget.firstName} ${widget.lastName}';
+    final displayName = '${_firstNameCtrl.text} ${_lastNameCtrl.text}';
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Navy header 
+            // Navy header
             Stack(
               clipBehavior: Clip.none,
               alignment: Alignment.bottomCenter,
@@ -79,12 +81,17 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 8),
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
                           child: Row(
                             children: [
                               IconButton(
-                                icon: const Icon(Icons.chevron_left,
-                                    color: Colors.white, size: 28),
+                                icon: const Icon(
+                                  Icons.chevron_left,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
                                 onPressed: () => Navigator.pop(context),
                               ),
                               Expanded(
@@ -101,23 +108,25 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
                                 ),
                               ),
                               ElevatedButton(
-                                onPressed: _onUpdate,
+                                onPressed: _save,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: primaryBlue,
                                   foregroundColor: Colors.white,
                                   minimumSize: const Size(78, 32),
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 14),
+                                    horizontal: 14,
+                                  ),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(20)),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                   elevation: 0,
                                 ),
                                 child: const Text(
                                   'UPDATE',
                                   style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -141,11 +150,7 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
                       color: const Color(0xFFD9DCE1),
                       border: Border.all(color: Colors.white, width: 3),
                     ),
-                    child: const Icon(
-                      Icons.person,
-                      size: 52,
-                      color: darkNavy,
-                    ),
+                    child: const Icon(Icons.person, size: 52, color: darkNavy),
                   ),
                 ),
               ],
@@ -165,29 +170,52 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
 
             const SizedBox(height: 28),
 
-            // Form fields 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _fieldLabel('First name'),
-                  _inputField(_firstNameCtrl),
-                  const SizedBox(height: 16),
+            // Form fields
+            Form(
+              key: _formKey,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _fieldLabel('First name'),
+                    _inputField(_firstNameCtrl),
+                    const SizedBox(height: 16),
 
-                  _fieldLabel('Last name'),
-                  _inputField(_lastNameCtrl),
-                  const SizedBox(height: 16),
+                    _fieldLabel('Last name'),
+                    _inputField(_lastNameCtrl),
+                    const SizedBox(height: 16),
 
-                  _fieldLabel('Password'),
-                  _inputField(_passwordCtrl),
-                  const SizedBox(height: 16),
+                    // For email
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangeEmailPage(),
+                          ),
+                        );
+                      },
+                      child: const Text("Change Email"),
+                    ),
+                    const SizedBox(height: 16),
 
-                  _fieldLabel('Email Address'),
-                  _inputField(_emailCtrl,
-                      keyboardType: TextInputType.emailAddress),
-                  const SizedBox(height: 40),
-                ],
+                    // For password
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ChangePasswordPage(),
+                          ),
+                        );
+                      },
+                      child: const Text("Change Password"),
+                    ),
+
+                    const SizedBox(height: 40),
+                  ],
+                ),
               ),
             ),
           ],
@@ -225,8 +253,10 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
         decoration: InputDecoration(
           filled: true,
           fillColor: fieldFill,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 0,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
             borderSide: const BorderSide(color: fieldBorder, width: 1.2),
@@ -237,8 +267,7 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
-            borderSide:
-                const BorderSide(color: Color(0xFF1A73E9), width: 1.5),
+            borderSide: const BorderSide(color: Color(0xFF1A73E9), width: 1.5),
           ),
         ),
       ),

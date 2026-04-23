@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../models/user.dart';
 import '../models/patient.dart';
 import '../models/xray_scan.dart';
 import '../models/scan_result.dart';
@@ -27,6 +28,38 @@ class DatabaseService {
               Patient.fromMap(snapshots.data()!, snapshots.id),
           toFirestore: (patient, _) => patient.toMap(),
         );
+  }
+
+  Future<UserModel> getUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (!doc.exists) {
+      throw Exception('User not found');
+    }
+
+    return UserModel.fromMap(doc.data()!, doc.id);
+  }
+
+  Future<void> updateUserProfile({
+    required String firstName,
+    required String lastName,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser!;
+
+    await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+      'firstName': firstName,
+      'lastName': lastName,
+      'updatedAt': Timestamp.now(),
+    });
   }
 
   // ------------------- PATIENTS ----------------------
@@ -59,6 +92,12 @@ class DatabaseService {
     } catch (e) {
       throw Exception('Failed to fetch patients: $e');
     }
+  }
+
+  Stream<List<Patient>> getPatientsStream() {
+    return _getPatientCollectionRef.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    });
   }
 
   Future<void> updatePatient(Patient patient) async {
@@ -235,6 +274,101 @@ class DatabaseService {
       throw Exception('Failed to fetch scan result: $e');
     }
   }
+
+  Stream<List<XrayScan>> getPatientScansStream(String patientId) {
+    return _getPatientCollectionRef
+        .doc(patientId)
+        .collection('scans')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => XrayScan.fromMap(doc.data(), doc.id))
+              .toList();
+        });
+  }
+
+  Future<bool> hasXrayHistory(String patientId) async {
+    final snapshot = await _getPatientCollectionRef
+        .doc(patientId)
+        .collection('scans')
+        .limit(1)
+        .get();
+
+    return snapshot.docs.isNotEmpty;
+  }
+
+  Stream<int> xrayCountStream(String patientId) {
+    return _getPatientCollectionRef
+        .doc(patientId)
+        .collection('scans')
+        .snapshots()
+        .map((s) => s.docs.length);
+  }
+
+  // /// STREAM ALL SCANS (Recent first)
+  // Stream<List<XrayScan>> getAllScansStream() {
+  //   return _firestore.collectionGroup('scans').snapshots().map((snapshot) {
+  //     final scans = snapshot.docs.map((doc) {
+  //       return XrayScan.fromMap(doc.data(), doc.id);
+  //     }).toList();
+
+  //     scans.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  //     return scans;
+  //   });
+  // }
+
+  // /// FILTER: by bone type
+  // Stream<List<XrayScan>> getScansByBone(String boneType) {
+  //   return getAllScansStream().map((scans) {
+  //     if (boneType == 'All') return scans;
+  //     return scans.where((s) => s.result != null).where((s) {
+  //       return s.result!.topPredictions.any(
+  //         (p) => p.bonePart.toLowerCase() == boneType.toLowerCase(),
+  //       );
+  //     }).toList();
+  //   });
+  // }
+
+  // /// FILTER: abnormal scans only
+  // Stream<List<XrayScan>> getAbnormalScans() {
+  //   return getAllScansStream().map((scans) {
+  //     return scans.where((s) {
+  //       return s.result?.hasAbnormality ?? false;
+  //     }).toList();
+  //   });
+  // }
+
+  // /// SEARCH (patient name / bone type / status)
+  // Stream<List<XrayScan>> searchScans(String query) {
+  //   final q = query.toLowerCase();
+
+  //   return getAllScansStream().map((scans) {
+  //     return scans.where((scan) {
+  //       final statusMatch = scan.analysisStatus.toLowerCase().contains(q);
+
+  //       final boneMatch =
+  //           scan.result?.topPredictions.any(
+  //             (p) => p.bonePart.toLowerCase().contains(q),
+  //           ) ??
+  //           false;
+
+  //       final confidenceMatch =
+  //           scan.result?.abnormalityConfidence.toString().contains(q) ?? false;
+
+  //       return statusMatch || boneMatch || confidenceMatch;
+  //     }).toList();
+  //   });
+  // }
+
+  // /// DATE FILTER (last 7 / 30 days etc.)
+  // Stream<List<XrayScan>> getScansByDateRange(DateTime start, DateTime end) {
+  //   return getAllScansStream().map((scans) {
+  //     return scans.where((scan) {
+  //       return scan.createdAt.isAfter(start) && scan.createdAt.isBefore(end);
+  //     }).toList();
+  //   });
+  // }
 
   // -------------------- FULL PIEPLINES TO CALL ----------------------
   Future<String> createFullXrayScan({

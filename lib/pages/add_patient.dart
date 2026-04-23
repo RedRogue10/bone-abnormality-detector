@@ -133,7 +133,7 @@ class _AddPatientPageState extends State<AddPatientPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Patient added successfully')),
       );
-      Navigator.pop(context);
+      Navigator.pop(context, true);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
