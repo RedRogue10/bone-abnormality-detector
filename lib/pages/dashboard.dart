@@ -12,7 +12,7 @@ import 'patient_list.dart';
 import 'info_screen.dart';
 import '../pages/doctor_page.dart';
 import '../pages/camera_capture.dart';
-import '../pages/recent_scans.dart';
+// import '../pages/recent_scans.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -141,12 +141,12 @@ class _DashboardPageState extends State<DashboardPage> {
                           icon: Icons.document_scanner_outlined,
                           label: 'RECENT SCANS',
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => RecentScansPage(),
-                              ),
-                            );
+                            // Navigator.push(
+                            //   context,
+                            //   MaterialPageRoute(
+                            //     builder: (_) => RecentScansPage(),
+                            //   ),
+                            // );
                           },
                         ),
                       ),
