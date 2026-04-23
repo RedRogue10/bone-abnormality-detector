@@ -127,7 +127,6 @@ class _DoctorPageState extends State<DoctorPage> {
                                 'EDIT',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),

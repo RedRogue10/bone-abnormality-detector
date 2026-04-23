@@ -250,7 +250,6 @@ class _EditPatientPageState extends State<EditPatientPage> {
           style: GoogleFonts.oswald(
             color: Colors.white,
             fontSize: 20,
-            letterSpacing: 1.5,
           ),
         ),
         actionLabel: 'UPDATE',
