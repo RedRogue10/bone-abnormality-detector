@@ -169,7 +169,7 @@ class _AddPatientPageState extends State<AddPatientPage> {
           Text(
             'Sex*',
             style: GoogleFonts.poppins(
-              fontSize: 13,
+              fontSize: 16,
               fontWeight: FontWeight.w500,
             ),
           ),
