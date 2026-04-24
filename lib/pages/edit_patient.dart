@@ -23,7 +23,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
   late final TextEditingController _firstNameCtrl = TextEditingController();
   late final TextEditingController _lastNameCtrl = TextEditingController();
   late final TextEditingController _middleNameCtrl = TextEditingController();
-  late final TextEditingController _sexCtrl = TextEditingController();
+  String selectedGender = 'Male';
   late final TextEditingController _dobCtrl = TextEditingController();
   late final TextEditingController _contactCtrl = TextEditingController();
   late final TextEditingController _emailCtrl = TextEditingController();
@@ -52,7 +52,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
       _firstNameCtrl.text = _patient!.firstName;
       _lastNameCtrl.text = _patient!.lastName;
       _middleNameCtrl.text = _patient!.middleName ?? '';
-      _sexCtrl.text = _patient!.sex;
+      selectedGender = _patient!.sex;
       _dobCtrl.text = _formatDate(_patient!.birthDate);
       _contactCtrl.text = _patient!.contactNumber ?? '';
       _addressCtrl.text = _patient!.address ?? '';
@@ -78,7 +78,6 @@ class _EditPatientPageState extends State<EditPatientPage> {
       _firstNameCtrl,
       _lastNameCtrl,
       _middleNameCtrl,
-      _sexCtrl,
       _dobCtrl,
       _contactCtrl,
       _addressCtrl,
@@ -136,7 +135,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
         middleName: _middleNameCtrl.text.trim().isEmpty
             ? null
             : _middleNameCtrl.text.trim(),
-        sex: _sexCtrl.text.trim(),
+        sex: selectedGender,
         birthDate: _parseDate(_dobCtrl.text.trim()),
         contactNumber: _contactCtrl.text.trim().isEmpty
             ? null
@@ -236,6 +235,75 @@ class _EditPatientPageState extends State<EditPatientPage> {
     });
   }
 
+  Widget _buildGenderField() {
+    const Color darkNavy    = Color(0xFF0B2545);
+    const Color primaryBlue = Color(0xFF1A73E9);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Sex*',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: ['Male', 'Female'].map((option) {
+              final selected = selectedGender == option;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => selectedGender = option),
+                  child: Container(
+                    margin: EdgeInsets.only(right: option == 'Male' ? 8 : 0),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? primaryBlue.withOpacity(0.08)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: selected ? primaryBlue : const Color(0xFFDDE6F0),
+                        width: selected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          selected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          size: 18,
+                          color: selected ? primaryBlue : Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          option,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            color: selected ? primaryBlue : darkNavy,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -268,7 +336,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
               _field('First Name*', _firstNameCtrl),
               _field('Last Name*', _lastNameCtrl),
               _field('Middle Name', _middleNameCtrl),
-              _field('Sex*', _sexCtrl),
+              _buildGenderField(),
               _field('Date of Birth*', _dobCtrl, isDate: true),
               _field(
                 'Contact Number',

@@ -167,9 +167,10 @@ class _AddPatientPageState extends State<AddPatientPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Gender*',
+            'Sex*',
             style: GoogleFonts.poppins(
-              fontSize: 13,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 6),
@@ -207,6 +208,9 @@ class _AddPatientPageState extends State<AddPatientPage> {
                           option,
                           style: GoogleFonts.poppins(
                             fontSize: 13,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
                             color: selected ? primaryBlue : darkNavy,
                           ),
                         ),

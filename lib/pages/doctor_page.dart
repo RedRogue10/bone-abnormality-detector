@@ -14,14 +14,11 @@ class DoctorPage extends StatefulWidget {
 }
 
 class _DoctorPageState extends State<DoctorPage> {
+  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color primaryBlue = Color(0xFF1A73E9);
+
   UserModel? user;
   bool isLoading = true;
-  String firstName = '';
-  String lastName = '';
-  String email = '';
-
-  static const Color darkNavy = Color(0xFF0B2545);
-  static const Color primaryBlue = Color(0xFF1A73E9);
 
   @override
   void initState() {
@@ -33,7 +30,6 @@ class _DoctorPageState extends State<DoctorPage> {
     try {
       await Auth().syncEmailIfChanged();
       final data = await DatabaseService().getUserData();
-
       setState(() {
         user = data;
         isLoading = false;
@@ -47,166 +43,169 @@ class _DoctorPageState extends State<DoctorPage> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
+
+    final firstName = user?.firstName ?? '';
+    final lastName  = user?.lastName  ?? '';
+    final fullName  = user?.fullName  ?? '';
+    final email     = user?.email     ?? '';
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          // Navy header
-          Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.bottomCenter,
-            children: [
-              Container(
-                color: darkNavy,
-                child: SafeArea(
-                  bottom: false,
-                  child: Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 8,
+          // HEADER
+          Container(
+            color: darkNavy,
+            child: SafeArea(
+              bottom: false,
+              child: Column(
+                children: [
+                  // Top bar
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 8),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left,
+                              color: Colors.white, size: 28),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.chevron_left,
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              'DOCTOR PAGE',
+                              style: GoogleFonts.oswald(
                                 color: Colors.white,
-                                size: 28,
-                              ),
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                            Expanded(
-                              child: Center(
-                                child: Text(
-                                  'DOCTOR PAGE',
-                                  style: GoogleFonts.oswald(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                  ),
-                                ),
+                                fontSize: 20,
                               ),
                             ),
-                            ElevatedButton(
-                              onPressed: () async {
-                                final result = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => EditDoctorInfoPage(
-                                      userId: widget.userId,
-                                    ),
-                                  ),
-                                );
-                                if (result == true) {
-                                  _loadUser();
+                          ),
+                        ),
+                        const SizedBox(width: 48),
+                      ],
+                    ),
+                  ),
 
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Profile updated"),
-                                    ),
-                                  );
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: primaryBlue,
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size(58, 32),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                elevation: 0,
-                              ),
-                              child: const Text(
-                                'EDIT',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
+                  const SizedBox(height: 20),
+
+                  // Avatar + name + edit icon
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 110,
+                        height: 110,
+                        child: Image.asset(
+                          'assets/images/doctor_icon.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.person,
+                                  size: 52, color: Colors.white),
                         ),
                       ),
-                      const SizedBox(height: 60),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            firstName,
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              height: 1.15,
+                            ),
+                          ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                lastName,
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  height: 1.15,
+                                ),
+                              ),
+                              const SizedBox(width: 15),
+                              GestureDetector(
+                                onTap: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => EditDoctorInfoPage(
+                                        userId: widget.userId,
+                                      ),
+                                    ),
+                                  );
+                                  if (result == true) {
+                                    _loadUser();
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Profile updated')),
+                                    );
+                                  }
+                                },
+                                child: const Icon(
+                                  Icons.edit_outlined,
+                                  color: primaryBlue,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ),
+
+                  const SizedBox(height: 28),
+                ],
               ),
-
-              // Avatar
-              Positioned(
-                bottom: -45,
-                child: Container(
-                  width: 90,
-                  height: 90,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: const Color(0xFFD9DCE1),
-                    border: Border.all(color: Colors.white, width: 3),
-                  ),
-                  child: const Icon(Icons.person, size: 52, color: darkNavy),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 58),
-
-          // Doctor name
-          Text(
-            '${user?.firstName} ${user?.lastName}',
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
             ),
           ),
 
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
 
-          // Info rows
+          // ── INFO ROWS ──
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  _infoRow('Name', user?.fullName ?? ''),
+                  _infoRow('Name', fullName),
                   _divider(),
                   _infoRow('Password', '••••••••••'),
                   _divider(),
-                  _infoRow('Email Address', user?.email ?? '', isLink: true),
+                  _infoRow('Email Address', email, isLink: true),
                   const Spacer(),
 
                   ElevatedButton.icon(
                     onPressed: () async {
                       await Auth().signOut();
-
                       if (!context.mounted) return;
-
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                      Navigator.of(context)
+                          .popUntil((route) => route.isFirst);
                     },
                     icon: const Icon(Icons.logout, size: 17),
                     label: const Text(
                       'Sign Out',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+                          fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black87,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(160, 46),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                          borderRadius: BorderRadius.circular(30)),
                       elevation: 2,
                     ),
                   ),
@@ -244,7 +243,7 @@ class _DoctorPageState extends State<DoctorPage> {
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontSize: 13,
-                color: isLink ? const Color(0xFF1A73E9) : Colors.black45,
+                color: isLink ? primaryBlue : Colors.black45,
                 decoration: isLink
                     ? TextDecoration.underline
                     : TextDecoration.none,
