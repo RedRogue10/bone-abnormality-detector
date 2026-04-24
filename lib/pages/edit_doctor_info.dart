@@ -101,8 +101,6 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
                                     style: GoogleFonts.oswald(
                                       color: Colors.white,
                                       fontSize: 20,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 1.5,
                                     ),
                                   ),
                                 ),
@@ -125,7 +123,6 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
                                   'UPDATE',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),

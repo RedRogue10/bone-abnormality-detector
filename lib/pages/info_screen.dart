@@ -38,8 +38,6 @@ class InfoScreen extends StatelessWidget {
                           style: GoogleFonts.oswald(
                             color: Colors.white,
                             fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.5,
                           ),
                         ),
                       ),
