@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'info_screen.dart';
-import 'xray_info.dart';
+import 'xray_result.dart';
 
 class CameraCapturePage extends StatefulWidget {
   final String? patientId;
@@ -89,7 +89,7 @@ class _CameraCapturePageState extends State<CameraCapturePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => XrayInfo(
+        builder: (_) => XrayResultPage(
           imageFile: _capturedImage!,
           patientId: widget.patientId,
         ),

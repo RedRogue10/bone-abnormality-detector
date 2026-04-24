@@ -1,7 +1,7 @@
 import 'package:bone_abnormality_detector/pages/info_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:bone_abnormality_detector/pages/xray_result.dart';
+import 'package:bone_abnormality_detector/pages/xray_info.dart';
 import '../services/database_service.dart';
 import '../models/xray_scan.dart';
 import '../models/patient.dart';
@@ -64,7 +64,7 @@ class _XrayHistoryState extends State<XrayHistory> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => XrayResultPage(
+                  builder: (_) => XrayInfo(
                     patientId: widget.patientId,
                     scanId: scan.id,
                   ),

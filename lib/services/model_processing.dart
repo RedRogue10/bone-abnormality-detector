@@ -77,10 +77,10 @@ class ModelProcessor {
     final classIndex = (top['classIndex'] as num).toInt();
     final confidence = (top['confidence'] as num).toDouble();
 
-    // MURA convention: class 1 = positive (abnormal), class 0 = negative (normal)
+    // Always store P(abnormal): if class 0 (normal) won, abnormality probability = 1 - P(normal)
     return {
       'hasAbnormality': classIndex == 1,
-      'confidence': confidence,
+      'confidence': classIndex == 1 ? confidence : 1.0 - confidence,
     };
   }
 
