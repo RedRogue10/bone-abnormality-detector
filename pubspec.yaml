@@ -44,11 +44,11 @@ dependencies:
   image_field: ^0.0.12
   image_picker: ^1.2.1
   intl: ^0.20.2
+  google_fonts: ^6.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  google_fonts: ^6.2.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

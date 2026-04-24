@@ -222,7 +222,7 @@ class _DashboardPageState extends State<DashboardPage> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const CameraCapturePage()),
+          MaterialPageRoute(builder: (_) => const CameraCapturePage(patientId: '1',)),
         );
       },
       child: Container(
@@ -358,7 +358,7 @@ class _DashboardPageState extends State<DashboardPage> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CameraCapturePage()),
+                  MaterialPageRoute(builder: (_) => const CameraCapturePage(patientId: '1',)),
                 );
               },
               child: Container(

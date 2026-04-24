@@ -209,7 +209,7 @@ class HomePage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const XrayResultPage()),
+                    MaterialPageRoute(builder: (_) => const XrayResultPage(patientId: '1', scanId: '0',)),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -239,7 +239,7 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const CameraCapturePage(),
+                      builder: (_) => const CameraCapturePage(patientId: '1',),
                     ),
                   );
                 },
