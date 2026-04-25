@@ -67,12 +67,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/view-results',
       builder: (context, state) {
-        final scanId = state.uri.queryParameters['scanId']!;
-        final token = state.uri.queryParameters['token']!;
-        final pid = state.uri.queryParameters['pid']!;
+        final v = state.uri.queryParameters['v']!;
 
         print("Returning Web View");
-        return PatientWebView(scanId: scanId, token: token, patientId: pid);
+        return PatientWebView(shortId: v);
       },
     ),
   ],
@@ -101,24 +99,6 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       routerConfig: _router,
-
-      // Uncomment line below to show the login page if no user is logged in
-      // home: StreamBuilder<User?>(
-      //   stream: FirebaseAuth.instance.authStateChanges(),
-      //   builder: (context, snapshot) {
-      //     if (snapshot.connectionState == ConnectionState.waiting) {
-      //       return const Scaffold(
-      //         body: Center(child: CircularProgressIndicator()),
-      //       );
-      //     }
-
-      //     if (snapshot.hasData) {
-      //       return const DashboardPage();
-      //     } else {
-      //       return const LoginPage();
-      //     }
-      //   },
-      // ),
     );
   }
 }
@@ -495,6 +475,7 @@ class HomePage extends StatelessWidget {
 
                   // 1. Generate the link
                   String secureLink = await sharingService.generateSecureLink(
+                    doctorId: 'Lh2WuYR8UjUAOWOUXRh20mfAFLJ2',
                     patientId: 'FmnTTC426eN34O1mhSta',
                     scanId: 'i1tyaiyv904tPBj6DS1R',
                   );

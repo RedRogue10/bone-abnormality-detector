@@ -5,28 +5,40 @@ const String DOCTOR_COLLECTION_REF = "users";
 class WebService {
   final _firestore = FirebaseFirestore.instance;
 
-  Future<Map<String, dynamic>?> fetchScanData(
-    String token,
-    String patientId,
-    String scanId,
-  ) async {
-    // if (useMockData) {
-    //   await Future.delayed(const Duration(seconds: 1)); // Simulate loading
-    //   return {
-    //     'imageUrl':
-    //         'https://picsum.photos/seed/xray/600/800', // A placeholder X-ray
-    //     'interpretation':
-    //         'AI Analysis: No major abnormalities detected in the distal radius. Recommended: Clinical correlation by a specialist.',
-    //     'shareExpiresAt': Timestamp.fromDate(
-    //       DateTime.now().add(const Duration(days: 3)),
-    //     ),
-    //     'createdAt': Timestamp.now(),
-    //   };
-    // }
+  // 1. This is the new "entry point" for the Web Page
+  Future<Map<String, dynamic>?> fetchByShortId(String shortId) async {
+    // Get the "Map" from our new public collection
+    final linkDoc = await _firestore
+        .collection('shared_links')
+        .doc(shortId)
+        .get();
 
+    if (!linkDoc.exists) throw Exception("Invalid or expired link.");
+
+    final linkData = linkDoc.data()!;
+
+    // Expiry check
+    final expiry = (linkData['expiresAt'] as Timestamp).toDate();
+    if (DateTime.now().isAfter(expiry)) throw Exception("Link expired.");
+
+    // 2. Now call the actual data fetcher using the HIDDEN IDs
+    return await _internalFetch(
+      doctorId: linkData['docId'],
+      patientId: linkData['pid'],
+      scanId: linkData['scanId'],
+      token: linkData['token'],
+    );
+  }
+
+  Future<Map<String, dynamic>?> _internalFetch({
+    required String doctorId,
+    required String patientId,
+    required String scanId,
+    required String token,
+  }) async {
     final doc = await _firestore
         .collection('users')
-        .doc('Lh2WuYR8UjUAOWOUXRh20mfAFLJ2')
+        .doc(doctorId)
         .collection('patients')
         .doc(patientId)
         .collection('scans')
@@ -36,15 +48,10 @@ class WebService {
     if (!doc.exists) throw Exception("Record not found.");
 
     final data = doc.data() as Map<String, dynamic>;
-    print("URL Token: $token");
-    print("DB Token: ${data['shareToken']}");
 
-    // Check if tokens match
-    if (data['shareToken'] != token) throw Exception("Invalid security token.");
-
-    // Check token expiry
-    final expiry = (data['shareExpiresAt'] as Timestamp).toDate();
-    if (DateTime.now().isAfter(expiry)) throw Exception("Link has expired.");
+    if (data['shareToken'] != token) {
+      throw Exception("Security token mismatch.");
+    }
 
     return data;
   }

@@ -33,6 +33,7 @@ class SharingService {
   }
 
   Future<String> generateSecureLink({
+    required String doctorId,
     required String patientId,
     required String scanId,
   }) async {
@@ -46,20 +47,39 @@ class SharingService {
     // 1. Generate a unique token
     final token = generateToken();
 
+    // Generate random ID for link
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final String shortId = List.generate(
+      10,
+      (i) => chars[Random().nextInt(chars.length)],
+    ).join();
+
     // 2. Set expiry for 3 days from now
     final expiry = DateTime.now().add(const Duration(days: 3));
 
-    // 3. Save to Firestore
-    await _getPatientCollectionRef
+    // Save to Scan docs
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(doctorId)
+        .collection('patients')
         .doc(patientId)
         .collection('scans')
         .doc(scanId)
-        .update({
-          'shareToken': token,
-          'shareExpiresAt': Timestamp.fromDate(expiry),
+        .update({'shareToken': token, 'shareExpiresAt': expiry});
+
+    // Save to Shared Links
+    await FirebaseFirestore.instance
+        .collection('shared_links')
+        .doc(shortId)
+        .set({
+          'docId': doctorId,
+          'pid': patientId,
+          'scanId': scanId,
+          'token': token,
+          'expiresAt': expiry,
         });
 
-    // 4. Return the link
-    return "https://xrayreader.online/view-results?scanId=$scanId&token=$token&pid=$patientId";
+    return "https://xrayreader.online/view-results?v=$shortId";
   }
 }

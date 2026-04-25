@@ -2,17 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/web_service.dart';
 
 class PatientWebView extends StatelessWidget {
-  final String scanId, token, patientId;
+  final String shortId;
 
-  // Set this to true to test the UI without a database
-  static const bool useMockData = false;
-
-  const PatientWebView({
-    super.key,
-    required this.scanId,
-    required this.token,
-    required this.patientId,
-  });
+  const PatientWebView({super.key, required this.shortId});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +18,8 @@ class PatientWebView extends StatelessWidget {
         elevation: 1,
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
-        future: WebService().fetchScanData(token, patientId, scanId),
+        // Gets the scan
+        future: WebService().fetchByShortId(shortId),
         builder: (context, snapshot) {
           // 1. Loading State
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -108,7 +101,7 @@ class PatientWebView extends StatelessWidget {
                                     ),
                                   ),
                                   Text(
-                                    "Scan ID: $scanId",
+                                    "Scan ID: placedolder",
                                     style: const TextStyle(fontSize: 12),
                                   ),
                                 ],
