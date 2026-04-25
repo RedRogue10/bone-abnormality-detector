@@ -5,9 +5,7 @@ const String DOCTOR_COLLECTION_REF = "users";
 class WebService {
   final _firestore = FirebaseFirestore.instance;
 
-  // 1. This is the new "entry point" for the Web Page
   Future<Map<String, dynamic>?> fetchByShortId(String shortId) async {
-    // Get the "Map" from our new public collection
     final linkDoc = await _firestore
         .collection('shared_links')
         .doc(shortId)
@@ -21,7 +19,6 @@ class WebService {
     final expiry = (linkData['expiresAt'] as Timestamp).toDate();
     if (DateTime.now().isAfter(expiry)) throw Exception("Link expired.");
 
-    // 2. Now call the actual data fetcher using the HIDDEN IDs
     return await _internalFetch(
       doctorId: linkData['docId'],
       patientId: linkData['pid'],
@@ -30,6 +27,7 @@ class WebService {
     );
   }
 
+  // Fetch actual data using hidden ids
   Future<Map<String, dynamic>?> _internalFetch({
     required String doctorId,
     required String patientId,

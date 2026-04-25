@@ -18,23 +18,15 @@ class PatientWebView extends StatelessWidget {
         elevation: 1,
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
-        // Gets the scan
+        // Gets the scan using the id
         future: WebService().fetchByShortId(shortId),
         builder: (context, snapshot) {
-          // 1. Loading State
+          // Loading State
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Change this line in your catch/error block
-          if (snapshot.hasError) {
-            print(
-              "DEBUG ERROR: ${snapshot.error}",
-            ); // Check F12 console for this!
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-
-          // 2. Error State (Expired link, wrong token, or permission denied)
+          // Error State (Expired link, wrong token, or permission denied)
           if (snapshot.hasError || !snapshot.hasData) {
             return Center(
               child: Column(
@@ -65,7 +57,7 @@ class PatientWebView extends StatelessWidget {
                     "No interpretation available."
               : "Analysis pending.";
 
-          // 3. Success State - The Result Dashboard
+          // Success State - The Result Dashboard
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Center(

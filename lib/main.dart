@@ -17,7 +17,7 @@ import 'web/patient_web_view.dart';
 
 import 'services/database_service.dart';
 import 'services/sharing_service.dart';
-// import 'services/email_service.dart';
+import 'services/email_service.dart';
 
 import 'models/bone_prediction.dart';
 import 'models/scan_result.dart';
@@ -473,19 +473,19 @@ class HomePage extends StatelessWidget {
                 onPressed: () async {
                   final sharingService = SharingService();
 
-                  // 1. Generate the link
+                  // Generate the link
                   String secureLink = await sharingService.generateSecureLink(
                     doctorId: 'Lh2WuYR8UjUAOWOUXRh20mfAFLJ2',
                     patientId: 'FmnTTC426eN34O1mhSta',
                     scanId: 'i1tyaiyv904tPBj6DS1R',
                   );
-                  // final emailservice = EmailService();
+                  final emailservice = EmailService();
 
-                  // // 2. Pass this link to your email function
-                  // await emailservice.sendEmailLink(
-                  //   'aimeeraebayle@gmail.com',
-                  //   secureLink,
-                  // );
+                  // Pass link to email function
+                  await emailservice.sendEmailLink(
+                    'aimeeraebayle@gmail.com',
+                    secureLink,
+                  );
                   print('LINK: ${secureLink}');
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

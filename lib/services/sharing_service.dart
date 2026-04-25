@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-// import 'package:crypto/crypto.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -44,7 +43,8 @@ class SharingService {
         .get();
 
     print("Exists: ${doc.exists}");
-    // 1. Generate a unique token
+
+    // Generate shared token
     final token = generateToken();
 
     // Generate random ID for link
@@ -55,9 +55,10 @@ class SharingService {
       (i) => chars[Random().nextInt(chars.length)],
     ).join();
 
-    // 2. Set expiry for 3 days from now
+    // Set expiry for 3 days from now
     final expiry = DateTime.now().add(const Duration(days: 3));
 
+    // ------------------ Save Shared token to both Scan and Shared Link collection --------------
     // Save to Scan docs
     await FirebaseFirestore.instance
         .collection('users')
@@ -80,6 +81,7 @@ class SharingService {
           'expiresAt': expiry,
         });
 
-    return "https://xrayreader.online/view-results?v=$shortId";
+    // return "https://xrayreader.online/view-results?v=$shortId";
+    return "http://localhost:62435/view-results?v=$shortId";
   }
 }

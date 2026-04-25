@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// Sends the secure link to the patient's email
 class EmailService {
   Future<void> sendEmailLink(String email, String link) async {
     await FirebaseFirestore.instance.collection('mail').add({
@@ -34,7 +35,7 @@ class EmailService {
 
           <div style="text-align:center;">
             <img src="../../assets/images/logo.png" width="120" />
-            <h2>X-Ray Scan Report</h2>
+            <h2>X-Ray Reader</h2>
           </div>
         </div>
       ''',
