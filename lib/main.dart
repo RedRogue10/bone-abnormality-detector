@@ -5,6 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:bone_abnormality_detector/firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 
 import 'pages/dashboard.dart';
 import 'pages/patient_list.dart';
@@ -13,11 +14,56 @@ import 'pages/camera_capture.dart';
 import 'pages/splash_screen.dart';
 import 'pages/reset_password.dart';
 import 'pages/login.dart';
+import 'web/patient_web_view.dart';
 
 import 'services/database_service.dart';
+import 'services/sharing_service.dart';
+// import 'services/email_service.dart';
 
 import 'models/bone_prediction.dart';
 import 'models/scan_result.dart';
+
+final GoRouter _router = GoRouter(
+  initialLocation: '/',
+
+  redirect: (context, state) {
+    final loggedIn = FirebaseAuth.instance.currentUser != null;
+
+    final goingToLogin = state.uri.path == '/';
+
+    // not logged in → force login
+    if (!loggedIn && !goingToLogin) return '/';
+
+    // logged in → prevent going back to login
+    if (loggedIn && goingToLogin) return '/dashboard';
+
+    return null;
+  },
+
+  routes: [
+    // Login
+    GoRoute(path: '/', builder: (context, state) => const LoginPage()),
+
+    // Dashboard
+    GoRoute(
+      path: '/dashboard',
+      builder: (context, state) => const DashboardPage(),
+    ),
+
+    // X-ray view page (EMAIL LINK TARGET)
+    GoRoute(
+      path: '/view-results',
+      builder: (context, state) {
+        final scanId = state.uri.queryParameters['scanId']!;
+        final token = state.uri.queryParameters['token']!;
+        final pid = state.uri.queryParameters['patientId']!;
+
+        print("Returning Web View");
+        return PatientWebView(scanId: scanId, token: token, patientId: pid);
+      },
+    ),
+  ],
+);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,30 +80,31 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Bone abnormality detector',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A73E9)),
         useMaterial3: true,
       ),
-      // Uncomment line below to show the login page if no user is logged in
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+      routerConfig: _router,
 
-          if (snapshot.hasData) {
-            return const DashboardPage();
-          } else {
-            return const LoginPage();
-          }
-        },
-      ),
-      // home: const HomePage(),
+      // Uncomment line below to show the login page if no user is logged in
+      // home: StreamBuilder<User?>(
+      //   stream: FirebaseAuth.instance.authStateChanges(),
+      //   builder: (context, snapshot) {
+      //     if (snapshot.connectionState == ConnectionState.waiting) {
+      //       return const Scaffold(
+      //         body: Center(child: CircularProgressIndicator()),
+      //       );
+      //     }
+
+      //     if (snapshot.hasData) {
+      //       return const DashboardPage();
+      //     } else {
+      //       return const LoginPage();
+      //     }
+      //   },
+      // ),
     );
   }
 }
@@ -124,6 +171,7 @@ class HomePage extends StatelessWidget {
         BonePrediction(bonePart: "Hand", confidence: 0.97),
       ],
       generatedAt: DateTime.now(),
+      interpretation: '',
     );
 
     await DatabaseService().updateXrayScanResult(
@@ -196,6 +244,37 @@ class HomePage extends StatelessWidget {
                 ),
                 child: const Text(
                   'Go to Patient List',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  String interpretation = 'Doctor\'s interpretation';
+                  DatabaseService().updateInterpretation(
+                    patientId: 'FmnTTC426eN34O1mhSta',
+                    scanId: 'i1tyaiyv904tPBj6DS1R',
+                    interpretation: interpretation,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF0B2545),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 4,
+                ),
+                child: const Text(
+                  'Update Interpretation',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -363,7 +442,6 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Information Page button
-              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
@@ -424,6 +502,53 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+
+              ElevatedButton(
+                onPressed: () async {
+                  final sharingService = SharingService();
+
+                  // 1. Generate the link
+                  String secureLink = await sharingService.generateSecureLink(
+                    patientId: 'FmnTTC426eN34O1mhSta',
+                    scanId: 'i1tyaiyv904tPBj6DS1R',
+                  );
+                  // final emailservice = EmailService();
+
+                  // // 2. Pass this link to your email function
+                  // await emailservice.sendEmailLink(
+                  //   'aimeeraebayle@gmail.com',
+                  //   secureLink,
+                  // );
+                  print('LINK: ${secureLink}');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Secure link sent to patient!"),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF0B2545),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 4,
+                ),
+                child: const Text(
+                  'Send Email Link',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),

@@ -65,4 +65,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'bone-abnormality-detector.firebasestorage.app',
     iosBundleId: 'com.example.boneAbnormalityDetector',
   );
+
 }

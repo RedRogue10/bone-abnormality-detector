@@ -146,6 +146,24 @@ class DatabaseService {
         .update({'result': result.toMap(), 'analysisStatus': 'completed'});
   }
 
+  // Update result interpretation
+  Future<void> updateInterpretation({
+    required String patientId,
+    required String scanId,
+    required String interpretation,
+  }) async {
+    try {
+      await _getPatientCollectionRef
+          .doc(patientId)
+          .collection('scans')
+          .doc(scanId)
+          .update({'result.interpretation': interpretation});
+    } catch (e) {
+      print('Error updating interpretation: $e');
+      rethrow;
+    }
+  }
+
   Future<XrayScan> getXrayScanById(String patientId, String scanId) async {
     try {
       DocumentSnapshot<Map<String, dynamic>> snapshot =
