@@ -1,52 +1,51 @@
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-// import '../models/patient.dart';
-// import '../models/xray_scan.dart';
+const String DOCTOR_COLLECTION_REF = "users";
 
-// const String DOCTOR_COLLECTION_REF = "users";
+class WebService {
+  final _firestore = FirebaseFirestore.instance;
 
-// class WebService {
-//   final _firestore = FirebaseFirestore.instance;
+  Future<Map<String, dynamic>?> fetchScanData(
+    String token,
+    String patientId,
+    String scanId,
+  ) async {
+    // if (useMockData) {
+    //   await Future.delayed(const Duration(seconds: 1)); // Simulate loading
+    //   return {
+    //     'imageUrl':
+    //         'https://picsum.photos/seed/xray/600/800', // A placeholder X-ray
+    //     'interpretation':
+    //         'AI Analysis: No major abnormalities detected in the distal radius. Recommended: Clinical correlation by a specialist.',
+    //     'shareExpiresAt': Timestamp.fromDate(
+    //       DateTime.now().add(const Duration(days: 3)),
+    //     ),
+    //     'createdAt': Timestamp.now(),
+    //   };
+    // }
 
-//   CollectionReference<Patient> get _getPatientCollectionRef {
-//     final user = FirebaseAuth.instance.currentUser;
-//     if (user == null) {
-//       throw Exception('No user logged in');
-//     }
-//     return _firestore
-//         .collection(DOCTOR_COLLECTION_REF)
-//         .doc(user.uid)
-//         .collection('patients')
-//         .withConverter<Patient>(
-//           fromFirestore: (snapshots, _) =>
-//               Patient.fromMap(snapshots.data()!, snapshots.id),
-//           toFirestore: (patient, _) => patient.toMap(),
-//         );
-//   }
+    final doc = await _firestore
+        .collection('users')
+        .doc('Lh2WuYR8UjUAOWOUXRh20mfAFLJ2')
+        .collection('patients')
+        .doc(patientId)
+        .collection('scans')
+        .doc(scanId)
+        .get();
 
-//   Future<XrayScan?> _verifyAndFetch(
-//     String patientId,
-//     String scanId,
-//     String token,
-//   ) async {
-//     final doc = await FirebaseFirestore.instance
-//         .collection('patients')
-//         .doc(patientId)
-//         .collection('scans')
-//         .doc(scanId)
-//         .get();
+    if (!doc.exists) throw Exception("Record not found.");
 
-//     if (!doc.exists) return null;
+    final data = doc.data() as Map<String, dynamic>;
+    print("URL Token: $token");
+    print("DB Token: ${data['shareToken']}");
 
-//     final data = doc.data()!;
-//     final DateTime expiry = (data['shareExpiresAt'] as Timestamp).toDate();
-//     final String storedToken = data['shareToken'];
+    // Check if tokens match
+    if (data['shareToken'] != token) throw Exception("Invalid security token.");
 
-//     // VALIDATION: Check token and check if current time is before expiry
-//     if (storedToken == token && DateTime.now().isBefore(expiry)) {
-//       return XrayScan.fromMap(data, doc.id);
-//     }
-//     return null;
-//   }
-// }
+    // Check token expiry
+    final expiry = (data['shareExpiresAt'] as Timestamp).toDate();
+    if (DateTime.now().isAfter(expiry)) throw Exception("Link has expired.");
+
+    return data;
+  }
+}

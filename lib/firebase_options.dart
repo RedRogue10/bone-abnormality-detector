@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -28,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -64,6 +55,35 @@ class DefaultFirebaseOptions {
     projectId: 'bone-abnormality-detector',
     storageBucket: 'bone-abnormality-detector.firebasestorage.app',
     iosBundleId: 'com.example.boneAbnormalityDetector',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyDj10TUUkO_8Qov2T_PpWBL6cwvFFIwqhM',
+    appId: '1:95271790157:web:dcc66c28e41a97c21b9e04',
+    messagingSenderId: '95271790157',
+    projectId: 'bone-abnormality-detector',
+    authDomain: 'bone-abnormality-detector.firebaseapp.com',
+    storageBucket: 'bone-abnormality-detector.firebasestorage.app',
+    measurementId: 'G-2CVBWK20KW',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyBWT-BQHd5qg37fGzgty7tjGCWiLFDn2X0',
+    appId: '1:95271790157:ios:7379836f8edb3d9a1b9e04',
+    messagingSenderId: '95271790157',
+    projectId: 'bone-abnormality-detector',
+    storageBucket: 'bone-abnormality-detector.firebasestorage.app',
+    iosBundleId: 'com.example.boneAbnormalityDetector',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyDj10TUUkO_8Qov2T_PpWBL6cwvFFIwqhM',
+    appId: '1:95271790157:web:67db924efb5969cb1b9e04',
+    messagingSenderId: '95271790157',
+    projectId: 'bone-abnormality-detector',
+    authDomain: 'bone-abnormality-detector.firebaseapp.com',
+    storageBucket: 'bone-abnormality-detector.firebasestorage.app',
+    measurementId: 'G-SJGPJYGH5J',
   );
 
 }

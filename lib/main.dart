@@ -8,7 +8,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 
 import 'pages/dashboard.dart';
-import 'pages/patient_list.dart';
 import 'pages/xray_result.dart';
 import 'pages/camera_capture.dart';
 import 'pages/splash_screen.dart';
@@ -23,19 +22,33 @@ import 'services/sharing_service.dart';
 import 'models/bone_prediction.dart';
 import 'models/scan_result.dart';
 
+import 'url_strategy_noop.dart' if (dart.library.html) 'url_strategy_web.dart';
+
 final GoRouter _router = GoRouter(
   initialLocation: '/',
 
   redirect: (context, state) {
     final loggedIn = FirebaseAuth.instance.currentUser != null;
+    final path = state.uri.path;
+    print("REDIRECTIONS: Target is ${state.uri.path}");
 
-    final goingToLogin = state.uri.path == '/';
+    // 1. ALWAYS allow the public route first, no matter what
+    if (path == '/view-results') {
+      return null;
+    }
 
-    // not logged in → force login
-    if (!loggedIn && !goingToLogin) return '/';
+    // 2. Auth Logic for the Doctor App
+    final isLoggingIn = path == '/';
 
-    // logged in → prevent going back to login
-    if (loggedIn && goingToLogin) return '/dashboard';
+    if (!loggedIn && !isLoggingIn) {
+      // Not logged in and trying to access dashboard? Go to login.
+      return '/';
+    }
+
+    if (loggedIn && isLoggingIn) {
+      // Already logged in? Skip the login page.
+      return '/dashboard';
+    }
 
     return null;
   },
@@ -56,7 +69,7 @@ final GoRouter _router = GoRouter(
       builder: (context, state) {
         final scanId = state.uri.queryParameters['scanId']!;
         final token = state.uri.queryParameters['token']!;
-        final pid = state.uri.queryParameters['patientId']!;
+        final pid = state.uri.queryParameters['pid']!;
 
         print("Returning Web View");
         return PatientWebView(scanId: scanId, token: token, patientId: pid);
@@ -67,6 +80,7 @@ final GoRouter _router = GoRouter(
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  setupUrlStrategy();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -222,36 +236,7 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Patient List button
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PatientListPage()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Go to Patient List',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
+
               ElevatedButton(
                 onPressed: () {
                   String interpretation = 'Doctor\'s interpretation';

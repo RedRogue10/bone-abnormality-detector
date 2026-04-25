@@ -1,71 +1,184 @@
 import 'package:flutter/material.dart';
-
-// import '../models/xray_scan.dart';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/web_service.dart';
 
 class PatientWebView extends StatelessWidget {
   final String scanId, token, patientId;
+
+  // Set this to true to test the UI without a database
+  static const bool useMockData = false;
+
   const PatientWebView({
+    super.key,
     required this.scanId,
     required this.token,
     required this.patientId,
   });
 
-  Future<DocumentSnapshot?> _verifyAndFetch() async {
-    final doc = await FirebaseFirestore.instance
-        .collection('patients')
-        .doc(patientId)
-        .collection('scans')
-        .doc(scanId)
-        .get();
-
-    if (!doc.exists) return null;
-
-    final data = doc.data() as Map<String, dynamic>;
-
-    // 1. Check token match
-    if (data['shareToken'] != token) {
-      throw Exception("Invalid link");
-    }
-
-    // 2. Check expiry
-    final expiry = (data['shareExpiresAt'] as Timestamp).toDate();
-    if (DateTime.now().isAfter(expiry)) {
-      throw Exception("Link expired");
-    }
-
-    return doc;
-  }
-
   @override
   Widget build(BuildContext context) {
-    print("PatientWebView loaded");
-
     return Scaffold(
-      body: FutureBuilder(
-        future: _verifyAndFetch(),
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text("X-Ray Scan Results"),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+      ),
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: WebService().fetchScanData(token, patientId, scanId),
         builder: (context, snapshot) {
+          // 1. Loading State
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
 
+          // Change this line in your catch/error block
           if (snapshot.hasError) {
-            return Scaffold(
-              body: Center(child: Text(snapshot.error.toString())),
+            print(
+              "DEBUG ERROR: ${snapshot.error}",
+            ); // Check F12 console for this!
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+
+          // 2. Error State (Expired link, wrong token, or permission denied)
+          if (snapshot.hasError || !snapshot.hasData) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.lock_clock, size: 64, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Access Denied",
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      "This link may have expired (valid for 3 days) or the security token is invalid. Please contact your clinic for a new link.",
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
             );
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final data = snapshot.data!;
 
-          return Scaffold(
-            appBar: AppBar(title: const Text("X-Ray Result")),
-            body: Column(
-              children: [
-                Image.network(data['imageUrl']),
-                const SizedBox(height: 20),
-                const Text("This result is valid for 3 days only"),
-              ],
+          final interpretation = data['result'] != null
+              ? data['result']['interpretation'] ??
+                    "No interpretation available."
+              : "Analysis pending.";
+
+          // 3. Success State - The Result Dashboard
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Center(
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Card
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.verified_user,
+                              color: Colors.green,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Secure Medical Record",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[700],
+                                    ),
+                                  ),
+                                  Text(
+                                    "Scan ID: $scanId",
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Image Section
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: InteractiveViewer(
+                        child: Image.network(
+                          data['imageUrl'],
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Interpretation Section
+                    const Text(
+                      "Doctor's Interpretation",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: const Border(
+                          left: BorderSide(width: 4, color: Colors.blueAccent),
+                        ),
+                      ),
+                      child: Text(
+                        interpretation,
+                        style: const TextStyle(fontSize: 16, height: 1.5),
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Expiry Warning
+                    Center(
+                      child: Text(
+                        "This link will expire on: ${data['shareExpiresAt'].toDate().toString().split(' ')[0]}",
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
             ),
           );
         },
