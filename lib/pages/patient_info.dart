@@ -5,6 +5,7 @@ import '../services/database_service.dart';
 import '../models/patient.dart';
 import '../pages/xray_history.dart';
 import '../pages/info_screen.dart';
+import '../pages/camera_capture.dart';
 
 class PatientInfoScreen extends StatefulWidget {
   final String patientId;
@@ -118,6 +119,25 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CameraCapturePage(patientId: widget.patientId),
+            ),
+          ).then((_) => _loadPatient());
+        },
+        backgroundColor: darkNavy,
+        icon: const Icon(Icons.add_a_photo_outlined, color: Colors.white),
+        label: Text(
+          'Add Scan',
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
       appBar: AppBar(
         backgroundColor: darkNavy,
         elevation: 0,

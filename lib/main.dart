@@ -8,7 +8,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 
 import 'pages/dashboard.dart';
-import 'pages/xray_result.dart';
 import 'pages/camera_capture.dart';
 import 'pages/splash_screen.dart';
 import 'pages/reset_password.dart';
@@ -251,10 +250,6 @@ class HomePage extends StatelessWidget {
               // Results Page button
               ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const XrayResultPage()),
-                  );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF0B2545),
@@ -283,7 +278,7 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const CameraCapturePage(),
+                      builder: (_) => const CameraCapturePage(patientId: '1',),
                     ),
                   );
                 },

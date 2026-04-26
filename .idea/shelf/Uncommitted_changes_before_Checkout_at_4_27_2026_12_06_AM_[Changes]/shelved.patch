@@ -1,0 +1,632 @@
+Index: lib/main.dart
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import 'dart:io';\r\nimport 'package:firebase_auth/firebase_auth.dart';\r\nimport 'package:firebase_core/firebase_core.dart';\r\nimport 'package:firebase_storage/firebase_storage.dart';\r\nimport 'package:bone_abnormality_detector/firebase_options.dart';\r\nimport 'package:flutter/material.dart';\r\nimport 'package:image_picker/image_picker.dart';\r\nimport 'package:go_router/go_router.dart';\r\n\r\nimport 'pages/dashboard.dart';\r\nimport 'pages/xray_result.dart';\r\nimport 'pages/camera_capture.dart';\r\nimport 'pages/splash_screen.dart';\r\nimport 'pages/reset_password.dart';\r\nimport 'pages/login.dart';\r\nimport 'web/patient_web_view.dart';\r\n\r\nimport 'services/database_service.dart';\r\nimport 'services/sharing_service.dart';\r\nimport 'services/email_service.dart';\r\n\r\nimport 'models/bone_prediction.dart';\r\nimport 'models/scan_result.dart';\r\n\r\nimport 'url_strategy_noop.dart' if (dart.library.html) 'url_strategy_web.dart';\r\n\r\nfinal GoRouter _router = GoRouter(\r\n  initialLocation: '/',\r\n\r\n  redirect: (context, state) {\r\n    final loggedIn = FirebaseAuth.instance.currentUser != null;\r\n    final path = state.uri.path;\r\n    print(\"REDIRECTIONS: Target is ${state.uri.path}\");\r\n\r\n    // 1. ALWAYS allow the public route first, no matter what\r\n    if (path == '/view-results') {\r\n      return null;\r\n    }\r\n\r\n    // 2. Auth Logic for the Doctor App\r\n    final isLoggingIn = path == '/';\r\n\r\n    if (!loggedIn && !isLoggingIn) {\r\n      // Not logged in and trying to access dashboard? Go to login.\r\n      return '/';\r\n    }\r\n\r\n    if (loggedIn && isLoggingIn) {\r\n      // Already logged in? Skip the login page.\r\n      return '/dashboard';\r\n    }\r\n\r\n    return null;\r\n  },\r\n\r\n  routes: [\r\n    // Login\r\n    GoRoute(path: '/', builder: (context, state) => const LoginPage()),\r\n\r\n    // Dashboard\r\n    GoRoute(\r\n      path: '/dashboard',\r\n      builder: (context, state) => const DashboardPage(),\r\n    ),\r\n\r\n    // X-ray view page (EMAIL LINK TARGET)\r\n    GoRoute(\r\n      path: '/view-results',\r\n      builder: (context, state) {\r\n        final v = state.uri.queryParameters['v']!;\r\n\r\n        print(\"Returning Web View\");\r\n        return PatientWebView(shortId: v);\r\n      },\r\n    ),\r\n  ],\r\n);\r\n\r\nvoid main() async {\r\n  WidgetsFlutterBinding.ensureInitialized();\r\n  setupUrlStrategy();\r\n\r\n  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);\r\n\r\n  print(\"Firebase initialized successfully!\");\r\n\r\n  runApp(const MyApp());\r\n}\r\n\r\nclass MyApp extends StatelessWidget {\r\n  const MyApp({super.key});\r\n\r\n  @override\r\n  Widget build(BuildContext context) {\r\n    return MaterialApp.router(\r\n      title: 'Bone abnormality detector',\r\n      theme: ThemeData(\r\n        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A73E9)),\r\n        useMaterial3: true,\r\n      ),\r\n      routerConfig: _router,\r\n    );\r\n  }\r\n}\r\n\r\nclass HomePage extends StatelessWidget {\r\n  const HomePage({super.key});\r\n\r\n  Future<void> _testAddScan() async {\r\n    try {\r\n      await DatabaseService().createXrayScan(patientId: 'FmnTTC426eN34O1mhSta');\r\n\r\n      print('Test scan added successfully!');\r\n    } catch (e) {\r\n      print('Error adding test scan: $e');\r\n    }\r\n  }\r\n\r\n  Future<void> _testStorage() async {\r\n    try {\r\n      final storageRef = FirebaseStorage.instance.ref();\r\n      final testFileRef = storageRef.child('test_upload.txt');\r\n\r\n      // Upload file\r\n      await testFileRef.putString('This is a test file for Firebase Storage.');\r\n\r\n      // Get the download URL\r\n      final downloadUrl = await testFileRef.getDownloadURL();\r\n      print('File uploaded successfully! Download URL: $downloadUrl');\r\n    } catch (e) {\r\n      print('Error testing Firebase Storage: $e');\r\n    }\r\n  }\r\n\r\n  Future<void> _testXrayPipeline() async {\r\n    try {\r\n      // pick image\r\n      final picker = ImagePicker();\r\n      final picked = await picker.pickImage(source: ImageSource.gallery);\r\n\r\n      if (picked == null) return;\r\n\r\n      final file = File(picked.path);\r\n\r\n      // call pipeline\r\n      final scanId = await DatabaseService().createFullXrayScan(\r\n        patientId: 'FmnTTC426eN34O1mhSta',\r\n        imageFile: file,\r\n      );\r\n\r\n      print(\"Scan created: $scanId\");\r\n    } catch (e) {\r\n      print(\"ERROR: $e\");\r\n    }\r\n  }\r\n\r\n  Future<void> _testAIUpdate() async {\r\n    final result = ScanResult(\r\n      generatedImageUrls: [\"https://example.com/heatmap.jpg\"],\r\n      hasAbnormality: true,\r\n      abnormalityConfidence: 0.91,\r\n      topPredictions: [\r\n        BonePrediction(bonePart: \"Hand\", confidence: 0.97),\r\n        BonePrediction(bonePart: \"Finger\", confidence: 0.52),\r\n        BonePrediction(bonePart: \"Hand\", confidence: 0.97),\r\n      ],\r\n      generatedAt: DateTime.now(),\r\n      interpretation: '',\r\n    );\r\n\r\n    await DatabaseService().updateXrayScanResult(\r\n      patientId: 'FmnTTC426eN34O1mhSta',\r\n      scanId: \"i1tyaiyv904tPBj6DS1R\",\r\n      result: result,\r\n    );\r\n\r\n    print(\"AI Result Updated Successfully\");\r\n  }\r\n\r\n  @override\r\n  Widget build(BuildContext context) {\r\n    return Scaffold(\r\n      backgroundColor: Colors.white,\r\n      body: Center(\r\n        child: SingleChildScrollView(\r\n          child: Column(\r\n            mainAxisAlignment: MainAxisAlignment.center,\r\n            children: [\r\n              // Dashboard button\r\n              ElevatedButton(\r\n                onPressed: () {\r\n                  Navigator.push(\r\n                    context,\r\n                    MaterialPageRoute(builder: (_) => const DashboardPage()),\r\n                  );\r\n                },\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Go to Dashboard',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n\r\n              ElevatedButton(\r\n                onPressed: () {\r\n                  String interpretation = 'Doctor\\'s interpretation';\r\n                  DatabaseService().updateInterpretation(\r\n                    patientId: 'FmnTTC426eN34O1mhSta',\r\n                    scanId: 'i1tyaiyv904tPBj6DS1R',\r\n                    interpretation: interpretation,\r\n                  );\r\n                },\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Update Interpretation',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n              // Results Page button\r\n              ElevatedButton(\r\n                onPressed: () {\r\n                  Navigator.push(\r\n                    context,\r\n                    MaterialPageRoute(builder: (_) => const XrayResultPage()),\r\n                  );\r\n                },\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Go to Results Page',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n              ElevatedButton(\r\n                onPressed: () {\r\n                  Navigator.push(\r\n                    context,\r\n                    MaterialPageRoute(\r\n                      builder: (_) => const CameraCapturePage(),\r\n                    ),\r\n                  );\r\n                },\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Go to Camera Page',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n              ElevatedButton(\r\n                onPressed: _testAddScan,\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Add Xray Scan',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n              ElevatedButton(\r\n                onPressed: _testStorage,\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Test Storage',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n              ElevatedButton(\r\n                onPressed: _testXrayPipeline,\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Test Xray Pipeline',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n              ElevatedButton(\r\n                onPressed: _testAIUpdate,\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Test AI Update',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n\r\n              // Information Page button\r\n              ElevatedButton(\r\n                onPressed: () {\r\n                  Navigator.push(\r\n                    context,\r\n                    MaterialPageRoute(builder: (_) => const SplashScreen()),\r\n                  );\r\n                },\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Go to Splash Screen',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n\r\n              const SizedBox(height: 16),\r\n              ElevatedButton(\r\n                onPressed: () {\r\n                  Navigator.push(\r\n                    context,\r\n                    MaterialPageRoute(\r\n                      builder: (_) => const ResetPasswordPage(),\r\n                    ),\r\n                  );\r\n                },\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Go to Reset Password',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n\r\n              ElevatedButton(\r\n                onPressed: () async {\r\n                  final sharingService = SharingService();\r\n\r\n                  // Generate the link\r\n                  String secureLink = await sharingService.generateSecureLink(\r\n                    doctorId: 'Lh2WuYR8UjUAOWOUXRh20mfAFLJ2',\r\n                    patientId: 'FmnTTC426eN34O1mhSta',\r\n                    scanId: 'i1tyaiyv904tPBj6DS1R',\r\n                  );\r\n                  final emailservice = EmailService();\r\n\r\n                  // Pass link to email function\r\n                  await emailservice.sendEmailLink(\r\n                    'kslabao@up.edu.ph',\r\n                    secureLink,\r\n                  );\r\n                  print('LINK: ${secureLink}');\r\n                  ScaffoldMessenger.of(context).showSnackBar(\r\n                    const SnackBar(\r\n                      content: Text(\"Secure link sent to patient!\"),\r\n                    ),\r\n                  );\r\n                },\r\n                style: ElevatedButton.styleFrom(\r\n                  backgroundColor: Color(0xFF0B2545),\r\n                  foregroundColor: Colors.white,\r\n                  padding: const EdgeInsets.symmetric(\r\n                    horizontal: 40,\r\n                    vertical: 16,\r\n                  ),\r\n                  shape: RoundedRectangleBorder(\r\n                    borderRadius: BorderRadius.circular(12),\r\n                  ),\r\n                  elevation: 4,\r\n                ),\r\n                child: const Text(\r\n                  'Send Email Link',\r\n                  style: TextStyle(\r\n                    fontSize: 16,\r\n                    fontWeight: FontWeight.bold,\r\n                    letterSpacing: 1,\r\n                  ),\r\n                ),\r\n              ),\r\n              const SizedBox(height: 16),\r\n            ],\r\n          ),\r\n        ),\r\n      ),\r\n    );\r\n  }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/lib/main.dart b/lib/main.dart
+--- a/lib/main.dart	(revision 8407297b79fab524c44408850f16e3f856beb6d7)
++++ b/lib/main.dart	(date 1777218721158)
+@@ -475,15 +475,15 @@
+ 
+                   // Generate the link
+                   String secureLink = await sharingService.generateSecureLink(
+-                    doctorId: 'Lh2WuYR8UjUAOWOUXRh20mfAFLJ2',
+-                    patientId: 'FmnTTC426eN34O1mhSta',
+-                    scanId: 'i1tyaiyv904tPBj6DS1R',
++                    doctorId: 'atJgI4RnBiM7P9xQQGALXwMJhTl1',
++                    patientId: 'w5k84hBntIRGc0N3Fsmq',
++                    scanId: 'gLbj4VyibqKm9aLfcWMS',
+                   );
+                   final emailservice = EmailService();
+ 
+                   // Pass link to email function
+                   await emailservice.sendEmailLink(
+-                    'kslabao@up.edu.ph',
++                    'msaguirre@up.edu.ph',
+                     secureLink,
+                   );
+                   print('LINK: ${secureLink}');
+Index: .idea/libraries/Flutter_Plugins.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><component name=\"libraryTable\">\r\n  <library name=\"Flutter Plugins\" type=\"FlutterPluginsLibraryType\">\r\n    <CLASSES>\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_windows-2.3.0\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_android-2.3.1\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_foundation-2.6.0\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/jni-1.0.0\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_linux-2.2.1\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/jni_flutter-1.0.1\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider-2.1.5\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera-0.12.0+1\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_web-0.3.5+3\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_android_camerax-0.7.1+2\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_avfoundation-0.10.1\" />\r\n    </CLASSES>\r\n    <JAVADOC />\r\n    <SOURCES />\r\n  </library>\r\n</component>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/libraries/Flutter_Plugins.xml b/.idea/libraries/Flutter_Plugins.xml
+--- a/.idea/libraries/Flutter_Plugins.xml	(revision 8407297b79fab524c44408850f16e3f856beb6d7)
++++ b/.idea/libraries/Flutter_Plugins.xml	(date 1777217063637)
+@@ -12,6 +12,24 @@
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_web-0.3.5+3" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_android_camerax-0.7.1+2" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_avfoundation-0.10.1" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth-6.4.0" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-6.1.5" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage-13.3.0" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_macos-0.2.2+1" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker-1.2.1" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core_web-3.6.0" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_web-5.3.0" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore-6.3.0" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_linux-0.9.4" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_windows-0.2.2" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_ios-0.8.13+6" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_android-0.8.13+16" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_for_web-3.1.1" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core-4.7.0" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.11.5" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_macos-0.9.5" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_linux-0.2.2" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_windows-0.9.3+5" />
+     </CLASSES>
+     <JAVADOC />
+     <SOURCES />
+Index: bone_abnormality_detector.iml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<module type=\"JAVA_MODULE\" version=\"4\">\r\n  <component name=\"NewModuleRootManager\" inherit-compiler-output=\"true\">\r\n    <exclude-output />\r\n    <content url=\"file://$MODULE_DIR$\">\r\n      <sourceFolder url=\"file://$MODULE_DIR$/lib\" isTestSource=\"false\" />\r\n      <sourceFolder url=\"file://$MODULE_DIR$/test\" isTestSource=\"true\" />\r\n      <excludeFolder url=\"file://$MODULE_DIR$/.dart_tool\" />\r\n      <excludeFolder url=\"file://$MODULE_DIR$/.idea\" />\r\n      <excludeFolder url=\"file://$MODULE_DIR$/build\" />\r\n      <excludeFolder url=\"file://$MODULE_DIR$/.pub\" />\r\n    </content>\r\n    <orderEntry type=\"sourceFolder\" forTests=\"false\" />\r\n    <orderEntry type=\"library\" name=\"Dart SDK\" level=\"project\" />\r\n    <orderEntry type=\"library\" name=\"Flutter Plugins\" level=\"project\" />\r\n    <orderEntry type=\"library\" name=\"Dart Packages\" level=\"project\" />\r\n  </component>\r\n</module>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/bone_abnormality_detector.iml b/bone_abnormality_detector.iml
+--- a/bone_abnormality_detector.iml	(revision 8407297b79fab524c44408850f16e3f856beb6d7)
++++ b/bone_abnormality_detector.iml	(date 1777216100347)
+@@ -9,6 +9,81 @@
+       <excludeFolder url="file://$MODULE_DIR$/.idea" />
+       <excludeFolder url="file://$MODULE_DIR$/build" />
+       <excludeFolder url="file://$MODULE_DIR$/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/file_selector_linux/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/file_selector_linux/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/file_selector_linux/build" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/file_selector_linux/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/file_selector_linux/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/file_selector_linux/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/image_picker_linux/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/image_picker_linux/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/image_picker_linux/build" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/image_picker_linux/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/image_picker_linux/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/image_picker_linux/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/jni/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/jni/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/jni/build" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/jni/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/jni/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/jni/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/path_provider_linux/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/path_provider_linux/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/path_provider_linux/build" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/path_provider_linux/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/path_provider_linux/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/linux/flutter/ephemeral/.plugin_symlinks/path_provider_linux/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/pipeline_example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/pipeline_example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/cloud_firestore/pipeline_example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/file_selector_windows/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/file_selector_windows/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/file_selector_windows/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/file_selector_windows/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/file_selector_windows/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/file_selector_windows/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_auth/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_auth/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_auth/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_auth/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_auth/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_auth/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_core/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_core/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_core/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_core/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_core/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_core/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_storage/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_storage/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_storage/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_storage/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_storage/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/firebase_storage/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/image_picker_windows/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/jni/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/jni/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/jni/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/jni/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/jni/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/jni/example/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/build" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/example/.dart_tool" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/example/.pub" />
++      <excludeFolder url="file://$MODULE_DIR$/windows/flutter/ephemeral/.plugin_symlinks/path_provider_windows/example/build" />
+     </content>
+     <orderEntry type="sourceFolder" forTests="false" />
+     <orderEntry type="library" name="Dart SDK" level="project" />
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"NONE\" />\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9\" name=\"Changes\" comment=\"\">\r\n      <change afterPath=\"$PROJECT_DIR$/lib/pages/camera_capture.dart\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/workspace.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/lib/main.dart\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/lib/main.dart\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/pubspec.yaml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/pubspec.yaml\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"ClangdSettings\">\r\n    <option name=\"formatViaClangd\" value=\"false\" />\r\n  </component>\r\n  <component name=\"FileEditorManager\">\r\n    <leaf>\r\n      <file leaf-file-name=\"main.dart\" pinned=\"false\" current-in-tab=\"true\">\r\n        <entry file=\"file://$PROJECT_DIR$/lib/main.dart\">\r\n          <provider selected=\"true\" editor-type-id=\"text-editor\">\r\n            <state relative-caret-position=\"0\">\r\n              <caret line=\"0\" column=\"0\" lean-forward=\"false\" selection-start-line=\"0\" selection-start-column=\"0\" selection-end-line=\"0\" selection-end-column=\"0\" />\r\n            </state>\r\n          </provider>\r\n        </entry>\r\n      </file>\r\n    </leaf>\r\n  </component>\r\n  <component name=\"FileTemplateManagerImpl\">\r\n    <option name=\"RECENT_TEMPLATES\">\r\n      <list>\r\n        <option value=\"Dart File\" />\r\n      </list>\r\n    </option>\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;customColor&quot;: &quot;&quot;,\r\n  &quot;associatedIndex&quot;: 4\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"3CFUdbjLF3C4N5SzpCvkEJBkoe1\" />\r\n  <component name=\"ProjectView\">\r\n    <navigator currentView=\"ProjectPane\" proportions=\"\" version=\"1\" />\r\n    <panes>\r\n      <pane id=\"ProjectPane\">\r\n        <option name=\"show-excluded-files\" value=\"false\" />\r\n      </pane>\r\n    </panes>\r\n  </component>\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\"><![CDATA[{\r\n  \"keyToString\": {\r\n    \"Flutter.main.dart.executor\": \"Run\",\r\n    \"RunOnceActivity.ShowReadmeOnStart\": \"true\",\r\n    \"RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252\": \"true\",\r\n    \"RunOnceActivity.cidr.known.project.marker\": \"true\",\r\n    \"RunOnceActivity.git.unshallow\": \"true\",\r\n    \"RunOnceActivity.readMode.enableVisualFormatting\": \"true\",\r\n    \"cf.first.check.clang-format\": \"false\",\r\n    \"cidr.known.project.marker\": \"true\",\r\n    \"dart.analysis.tool.window.visible\": \"false\",\r\n    \"git-widget-placeholder\": \"camera-capture-screen\",\r\n    \"io.flutter.project.isFirstOpen\": \"true\",\r\n    \"io.flutter.reload.alreadyRun\": \"true\",\r\n    \"kotlin-language-version-configured\": \"true\",\r\n    \"project.structure.last.edited\": \"Project\",\r\n    \"project.structure.proportion\": \"0.0\",\r\n    \"project.structure.side.proportion\": \"0.0\",\r\n    \"settings.editor.selected.configurable\": \"preferences.pluginManager\",\r\n    \"show.migrate.to.gradle.popup\": \"false\"\r\n  }\r\n}]]></component>\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9\" name=\"Changes\" comment=\"\" />\r\n      <created>1775980904824</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1775980904824</updated>\r\n    </task>\r\n    <servers />\r\n  </component>\r\n  <component name=\"ToolWindowManager\">\r\n    <editor active=\"true\" />\r\n    <layout>\r\n      <window_info id=\"Project\" active=\"false\" anchor=\"left\" auto_hide=\"false\" internal_type=\"DOCKED\" type=\"DOCKED\" visible=\"true\" show_stripe_button=\"true\" weight=\"0.25\" sideWeight=\"0.5\" order=\"0\" side_tool=\"false\" content_ui=\"combo\" />\r\n    </layout>\r\n  </component>\r\n</project>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 8407297b79fab524c44408850f16e3f856beb6d7)
++++ b/.idea/workspace.xml	(date 1777217885913)
+@@ -5,12 +5,11 @@
+   </component>
+   <component name="ChangeListManager">
+     <list default="true" id="d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9" name="Changes" comment="">
+-      <change afterPath="$PROJECT_DIR$/lib/pages/camera_capture.dart" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
++      <change beforePath="$PROJECT_DIR$/bone_abnormality_detector.iml" beforeDir="false" afterPath="$PROJECT_DIR$/bone_abnormality_detector.iml" afterDir="false" />
+       <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
+     </list>
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+@@ -71,7 +70,7 @@
+     "cf.first.check.clang-format": "false",
+     "cidr.known.project.marker": "true",
+     "dart.analysis.tool.window.visible": "false",
+-    "git-widget-placeholder": "camera-capture-screen",
++    "git-widget-placeholder": "email-service",
+     "io.flutter.project.isFirstOpen": "true",
+     "io.flutter.reload.alreadyRun": "true",
+     "kotlin-language-version-configured": "true",
+Index: .idea/libraries/Dart_Packages.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><component name=\"libraryTable\">\r\n  <library name=\"Dart Packages\" type=\"DartPackagesLibraryType\">\r\n    <properties>\r\n      <option name=\"packageNameToDirsMap\">\r\n        <entry key=\"args\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/args-2.7.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"async\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/async-2.13.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"boolean_selector\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/boolean_selector-2.1.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"camera\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera-0.12.0+1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"camera_android_camerax\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_android_camerax-0.7.1+2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"camera_avfoundation\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_avfoundation-0.10.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"camera_platform_interface\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_platform_interface-2.12.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"camera_web\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_web-0.3.5+3/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"characters\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/characters-1.4.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"clock\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/clock-1.1.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"code_assets\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/code_assets-1.0.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"collection\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/collection-1.19.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"cross_file\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cross_file-0.3.5+2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"crypto\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/crypto-3.0.7/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"cupertino_icons\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cupertino_icons-1.0.9/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"fake_async\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/fake_async-1.3.3/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"ffi\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/ffi-2.2.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"file\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file-7.0.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"flutter\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/packages/flutter/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"flutter_lints\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_lints-6.0.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"flutter_plugin_android_lifecycle\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.34/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"flutter_test\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/packages/flutter_test/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"flutter_web_plugins\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/packages/flutter_web_plugins/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"glob\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/glob-2.1.3/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"google_fonts\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/google_fonts-6.3.3/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"hooks\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/hooks-1.0.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"http\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/http-1.6.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"http_parser\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/http_parser-4.1.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"jni\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/jni-1.0.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"jni_flutter\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/jni_flutter-1.0.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"leak_tracker\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/leak_tracker-11.0.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"leak_tracker_flutter_testing\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/leak_tracker_flutter_testing-3.0.10/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"leak_tracker_testing\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/leak_tracker_testing-3.0.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"lints\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/lints-6.1.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"logging\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/logging-1.3.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"matcher\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/matcher-0.12.19/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"material_color_utilities\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/material_color_utilities-0.13.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"meta\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/meta-1.17.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"native_toolchain_c\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/native_toolchain_c-0.17.6/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"objective_c\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/objective_c-9.3.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"package_config\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/package_config-2.2.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"path\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path-1.9.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"path_provider\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider-2.1.5/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"path_provider_android\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_android-2.3.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"path_provider_foundation\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_foundation-2.6.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"path_provider_linux\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_linux-2.2.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"path_provider_platform_interface\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_platform_interface-2.1.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"path_provider_windows\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_windows-2.3.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"platform\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/platform-3.1.6/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"plugin_platform_interface\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/plugin_platform_interface-2.1.8/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"pub_semver\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/pub_semver-2.2.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"sky_engine\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/bin/cache/pkg/sky_engine/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"source_span\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/source_span-1.10.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"stack_trace\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stack_trace-1.12.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"stream_channel\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stream_channel-2.1.4/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"stream_transform\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stream_transform-2.1.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"string_scanner\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/string_scanner-1.4.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"term_glyph\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/term_glyph-1.2.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"test_api\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/test_api-0.7.10/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"typed_data\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/typed_data-1.4.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"vector_math\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_math-2.2.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"vm_service\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vm_service-15.0.2/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"web\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/web-1.1.1/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"xdg_directories\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/xdg_directories-1.1.0/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n        <entry key=\"yaml\">\r\n          <value>\r\n            <list>\r\n              <option value=\"$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/yaml-3.1.3/lib\" />\r\n            </list>\r\n          </value>\r\n        </entry>\r\n      </option>\r\n    </properties>\r\n    <CLASSES>\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/args-2.7.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/async-2.13.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/boolean_selector-2.1.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera-0.12.0+1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_android_camerax-0.7.1+2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_avfoundation-0.10.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_platform_interface-2.12.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_web-0.3.5+3/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/characters-1.4.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/clock-1.1.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/code_assets-1.0.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/collection-1.19.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cross_file-0.3.5+2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/crypto-3.0.7/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cupertino_icons-1.0.9/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/fake_async-1.3.3/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/ffi-2.2.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file-7.0.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_lints-6.0.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.34/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/glob-2.1.3/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/google_fonts-6.3.3/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/hooks-1.0.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/http-1.6.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/http_parser-4.1.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/jni-1.0.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/jni_flutter-1.0.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/leak_tracker-11.0.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/leak_tracker_flutter_testing-3.0.10/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/leak_tracker_testing-3.0.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/lints-6.1.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/logging-1.3.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/matcher-0.12.19/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/material_color_utilities-0.13.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/meta-1.17.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/native_toolchain_c-0.17.6/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/objective_c-9.3.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/package_config-2.2.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path-1.9.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider-2.1.5/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_android-2.3.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_foundation-2.6.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_linux-2.2.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_platform_interface-2.1.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_windows-2.3.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/platform-3.1.6/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/plugin_platform_interface-2.1.8/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/pub_semver-2.2.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/source_span-1.10.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stack_trace-1.12.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stream_channel-2.1.4/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stream_transform-2.1.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/string_scanner-1.4.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/term_glyph-1.2.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/test_api-0.7.10/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/typed_data-1.4.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_math-2.2.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vm_service-15.0.2/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/web-1.1.1/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/xdg_directories-1.1.0/lib\" />\r\n      <root url=\"file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/yaml-3.1.3/lib\" />\r\n      <root url=\"file://$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/bin/cache/pkg/sky_engine/lib\" />\r\n      <root url=\"file://$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/packages/flutter/lib\" />\r\n      <root url=\"file://$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/packages/flutter_test/lib\" />\r\n      <root url=\"file://$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/packages/flutter_web_plugins/lib\" />\r\n    </CLASSES>\r\n    <JAVADOC />\r\n    <SOURCES />\r\n  </library>\r\n</component>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/libraries/Dart_Packages.xml b/.idea/libraries/Dart_Packages.xml
+--- a/.idea/libraries/Dart_Packages.xml	(revision 8407297b79fab524c44408850f16e3f856beb6d7)
++++ b/.idea/libraries/Dart_Packages.xml	(date 1777217063625)
+@@ -2,6 +2,13 @@
+   <library name="Dart Packages" type="DartPackagesLibraryType">
+     <properties>
+       <option name="packageNameToDirsMap">
++        <entry key="_flutterfire_internals">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/_flutterfire_internals-1.3.69/lib" />
++            </list>
++          </value>
++        </entry>
+         <entry key="args">
+           <value>
+             <list>
+@@ -72,6 +79,27 @@
+             </list>
+           </value>
+         </entry>
++        <entry key="cloud_firestore">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore-6.3.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="cloud_firestore_platform_interface">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_platform_interface-7.2.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="cloud_firestore_web">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_web-5.3.0/lib" />
++            </list>
++          </value>
++        </entry>
+         <entry key="code_assets">
+           <value>
+             <list>
+@@ -128,6 +156,97 @@
+             </list>
+           </value>
+         </entry>
++        <entry key="file_selector_linux">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_linux-0.9.4/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="file_selector_macos">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_macos-0.9.5/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="file_selector_platform_interface">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_platform_interface-2.7.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="file_selector_windows">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_windows-0.9.3+5/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_auth">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth-6.4.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_auth_platform_interface">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_platform_interface-8.1.9/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_auth_web">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-6.1.5/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_core">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core-4.7.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_core_platform_interface">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core_platform_interface-6.0.3/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_core_web">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core_web-3.6.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_storage">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage-13.3.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_storage_platform_interface">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_platform_interface-5.2.20/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="firebase_storage_web">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.11.5/lib" />
++            </list>
++          </value>
++        </entry>
+         <entry key="flutter">
+           <value>
+             <list>
+@@ -146,6 +265,13 @@
+           <value>
+             <list>
+               <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.34/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="flutter_svg">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_svg-2.2.4/lib" />
+             </list>
+           </value>
+         </entry>
+@@ -167,6 +293,13 @@
+           <value>
+             <list>
+               <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/glob-2.1.3/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="go_router">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/go_router-17.2.2/lib" />
+             </list>
+           </value>
+         </entry>
+@@ -195,6 +328,69 @@
+           <value>
+             <list>
+               <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/http_parser-4.1.2/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="image_picker">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker-1.2.1/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="image_picker_android">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_android-0.8.13+16/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="image_picker_for_web">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_for_web-3.1.1/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="image_picker_ios">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_ios-0.8.13+6/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="image_picker_linux">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_linux-0.2.2/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="image_picker_macos">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_macos-0.2.2+1/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="image_picker_platform_interface">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_platform_interface-2.11.1/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="image_picker_windows">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_windows-0.2.2/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="intl">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/intl-0.20.2/lib" />
+             </list>
+           </value>
+         </entry>
+@@ -265,6 +461,13 @@
+           <value>
+             <list>
+               <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/meta-1.17.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="mime">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/mime-2.0.0/lib" />
+             </list>
+           </value>
+         </entry>
+@@ -296,6 +499,13 @@
+             </list>
+           </value>
+         </entry>
++        <entry key="path_parsing">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_parsing-1.1.0/lib" />
++            </list>
++          </value>
++        </entry>
+         <entry key="path_provider">
+           <value>
+             <list>
+@@ -338,6 +548,13 @@
+             </list>
+           </value>
+         </entry>
++        <entry key="petitparser">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/petitparser-7.0.2/lib" />
++            </list>
++          </value>
++        </entry>
+         <entry key="platform">
+           <value>
+             <list>
+@@ -373,6 +590,13 @@
+             </list>
+           </value>
+         </entry>
++        <entry key="speedometer_chart">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/speedometer_chart-1.0.8/lib" />
++            </list>
++          </value>
++        </entry>
+         <entry key="stack_trace">
+           <value>
+             <list>
+@@ -419,6 +643,27 @@
+           <value>
+             <list>
+               <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/typed_data-1.4.0/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="vector_graphics">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_graphics-1.1.21/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="vector_graphics_codec">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_graphics_codec-1.1.13/lib" />
++            </list>
++          </value>
++        </entry>
++        <entry key="vector_graphics_compiler">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_graphics_compiler-1.2.0/lib" />
+             </list>
+           </value>
+         </entry>
+@@ -450,6 +695,13 @@
+             </list>
+           </value>
+         </entry>
++        <entry key="xml">
++          <value>
++            <list>
++              <option value="$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/xml-6.6.1/lib" />
++            </list>
++          </value>
++        </entry>
+         <entry key="yaml">
+           <value>
+             <list>
+@@ -460,6 +712,7 @@
+       </option>
+     </properties>
+     <CLASSES>
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/_flutterfire_internals-1.3.69/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/args-2.7.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/async-2.13.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/boolean_selector-2.1.2/lib" />
+@@ -470,6 +723,9 @@
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/camera_web-0.3.5+3/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/characters-1.4.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/clock-1.1.2/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore-6.3.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_platform_interface-7.2.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cloud_firestore_web-5.3.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/code_assets-1.0.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/collection-1.19.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/cross_file-0.3.5+2/lib" />
+@@ -478,13 +734,37 @@
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/fake_async-1.3.3/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/ffi-2.2.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file-7.0.1/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_linux-0.9.4/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_macos-0.9.5/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_platform_interface-2.7.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/file_selector_windows-0.9.3+5/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth-6.4.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_platform_interface-8.1.9/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_auth_web-6.1.5/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core-4.7.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core_platform_interface-6.0.3/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_core_web-3.6.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage-13.3.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_platform_interface-5.2.20/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/firebase_storage_web-3.11.5/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_lints-6.0.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_plugin_android_lifecycle-2.0.34/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_svg-2.2.4/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/glob-2.1.3/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/go_router-17.2.2/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/google_fonts-6.3.3/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/hooks-1.0.2/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/http-1.6.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/http_parser-4.1.2/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker-1.2.1/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_android-0.8.13+16/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_for_web-3.1.1/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_ios-0.8.13+6/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_linux-0.2.2/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_macos-0.2.2+1/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_platform_interface-2.11.1/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/image_picker_windows-0.2.2/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/intl-0.20.2/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/jni-1.0.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/jni_flutter-1.0.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/leak_tracker-11.0.2/lib" />
+@@ -495,20 +775,24 @@
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/matcher-0.12.19/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/material_color_utilities-0.13.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/meta-1.17.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/mime-2.0.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/native_toolchain_c-0.17.6/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/objective_c-9.3.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/package_config-2.2.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path-1.9.1/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_parsing-1.1.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider-2.1.5/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_android-2.3.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_foundation-2.6.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_linux-2.2.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_platform_interface-2.1.2/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/path_provider_windows-2.3.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/petitparser-7.0.2/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/platform-3.1.6/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/plugin_platform_interface-2.1.8/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/pub_semver-2.2.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/source_span-1.10.2/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/speedometer_chart-1.0.8/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stack_trace-1.12.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stream_channel-2.1.4/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/stream_transform-2.1.1/lib" />
+@@ -516,10 +800,14 @@
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/term_glyph-1.2.2/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/test_api-0.7.10/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/typed_data-1.4.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_graphics-1.1.21/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_graphics_codec-1.1.13/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_graphics_compiler-1.2.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vector_math-2.2.0/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/vm_service-15.0.2/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/web-1.1.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/xdg_directories-1.1.0/lib" />
++      <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/xml-6.6.1/lib" />
+       <root url="file://$USER_HOME$/AppData/Local/Pub/Cache/hosted/pub.dev/yaml-3.1.3/lib" />
+       <root url="file://$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/bin/cache/pkg/sky_engine/lib" />
+       <root url="file://$PROJECT_DIR$/../../Coding Apps/Flutter/flutter/packages/flutter/lib" />
