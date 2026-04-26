@@ -82,6 +82,6 @@ class SharingService {
         });
 
     // return "https://xrayreader.online/view-results?v=$shortId";
-    return "http://localhost:62435/view-results?v=$shortId";
+    return "https://bone-abnormality-detector.web.app/view-results?v=$shortId";
   }
 }

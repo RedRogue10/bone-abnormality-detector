@@ -40,6 +40,10 @@ class EmailService {
         </div>
       ''',
       },
+      'trackingSettings': {
+        'clickTracking': {'enable': false},
+        'openTracking': {'enable': false},
+      },
     });
     print("Email sent successfully!!!");
   }

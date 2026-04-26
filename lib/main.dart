@@ -483,7 +483,7 @@ class HomePage extends StatelessWidget {
 
                   // Pass link to email function
                   await emailservice.sendEmailLink(
-                    'aimeeraebayle@gmail.com',
+                    'kslabao@up.edu.ph',
                     secureLink,
                   );
                   print('LINK: ${secureLink}');
