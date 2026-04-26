@@ -689,7 +689,7 @@ class _XrayInfoState extends State<XrayInfo> {
               ),
             ),
 
-            // ── Retake / Save ─────────────────────────────────────────
+            // Retake / Save
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
