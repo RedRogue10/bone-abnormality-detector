@@ -326,6 +326,41 @@ class DatabaseService {
         .map((s) => s.docs.length);
   }
 
+  // -------------------- RETRIEVE SCANS ----------------------------
+  Future<void> logRecentScanView({
+    required String scanId,
+    required String scanName,
+    required String patientId,
+    required String scanPath,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+    final docRef = _firestore
+        .collection(DOCTOR_COLLECTION_REF)
+        .doc(user.uid)
+        .collection('recent_views')
+        .doc(scanId);
+
+    await docRef.set({
+      'scanId': scanId,
+      'patientId': patientId,
+      'lastAccessed': FieldValue.serverTimestamp(),
+      'scanPath': scanPath,
+    }, SetOptions(merge: true)); // Use merge to avoid overwriting other data
+  }
+
+  Stream<QuerySnapshot> getRecentlyAccessedScansStream(String doctorId) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(doctorId)
+        .collection('recent_views')
+        .orderBy('lastAccessed', descending: true)
+        .limit(10)
+        .snapshots();
+  }
+
   // -------------------- FULL PIEPLINES TO CALL ----------------------
   Future<String> createFullXrayScan({
     required String patientId,
