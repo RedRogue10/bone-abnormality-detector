@@ -10,7 +10,6 @@ import 'package:go_router/go_router.dart';
 import 'pages/dashboard.dart';
 import 'pages/camera_capture.dart';
 import 'pages/splash_screen.dart';
-import 'pages/reset_password.dart';
 import 'pages/login.dart';
 import 'web/patient_web_view.dart';
 
@@ -249,8 +248,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 16),
               // Results Page button
               ElevatedButton(
-                onPressed: () {
-                },
+                onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF0B2545),
                   foregroundColor: Colors.white,
@@ -278,7 +276,7 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const CameraCapturePage(patientId: '1',),
+                      builder: (_) => const CameraCapturePage(patientId: '1'),
                     ),
                   );
                 },
@@ -430,39 +428,6 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ResetPasswordPage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Go to Reset Password',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
 
               ElevatedButton(
                 onPressed: () async {

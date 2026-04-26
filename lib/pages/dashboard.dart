@@ -1,3 +1,4 @@
+import 'package:bone_abnormality_detector/pages/retrieve_scans.dart';
 import 'package:flutter/material.dart';
 import 'package:bone_abnormality_detector/main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -141,12 +142,10 @@ class _DashboardPageState extends State<DashboardPage> {
                           icon: Icons.document_scanner_outlined,
                           label: 'RECENT SCANS',
                           onTap: () {
-                            // Navigator.push(
-                            //   context,
-                            //   MaterialPageRoute(
-                            //     builder: (_) => RecentScansPage(),
-                            //   ),
-                            // );
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => AllScansPage()),
+                            );
                           },
                         ),
                       ),
@@ -222,7 +221,9 @@ class _DashboardPageState extends State<DashboardPage> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const CameraCapturePage(patientId: '1',)),
+          MaterialPageRoute(
+            builder: (_) => const CameraCapturePage(patientId: '1'),
+          ),
         );
       },
       child: Container(
@@ -358,7 +359,9 @@ class _DashboardPageState extends State<DashboardPage> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const CameraCapturePage(patientId: '1',)),
+                  MaterialPageRoute(
+                    builder: (_) => const CameraCapturePage(patientId: '1'),
+                  ),
                 );
               },
               child: Container(
