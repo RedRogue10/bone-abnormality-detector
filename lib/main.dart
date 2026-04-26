@@ -8,8 +8,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 
 import 'pages/dashboard.dart';
-import 'pages/xray_result.dart';
-import 'pages/patient_list.dart';
 import 'pages/camera_capture.dart';
 import 'pages/splash_screen.dart';
 import 'pages/reset_password.dart';

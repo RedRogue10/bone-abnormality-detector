@@ -14,12 +14,12 @@ enum BonePart {
   shoulder,
   wrist;
 
-  String get assetPath => 'flutter_assets/assets/models/$name.tflite';
+  String get assetPath => 'assets/models/$name.tflite';
   String get displayName => name[0].toUpperCase() + name.substring(1);
 }
 
 class ModelProcessor {
-  static const String _classifierPath = 'flutter_assets/assets/models/bone_classifier.tflite';
+  static const String _classifierPath = 'assets/models/bone_classifier.tflite';
 
   YOLO? _classifier;
   YOLO? _abnormalityModel;
@@ -106,7 +106,7 @@ class ModelProcessor {
       topPredictions: predictions.take(3).toList(),
       hasAbnormality: abnormality['hasAbnormality'] as bool,
       abnormalityConfidence: abnormality['confidence'] as double,
-      generatedAt: DateTime.now(),
+      generatedAt: DateTime.now(), interpretation: '',
     );
   }
 }
