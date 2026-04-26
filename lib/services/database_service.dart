@@ -345,24 +345,28 @@ class DatabaseService {
   Future<void> logRecentScanView({
     required String scanId,
     required String patientId,
-    required String scanPath,
+    required String patientName,
+    required String imageUrl,
+    required DateTime scanDate,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       throw Exception('No user logged in');
     }
-    final docRef = _firestore
+
+    await _firestore
         .collection(DOCTOR_COLLECTION_REF)
         .doc(user.uid)
         .collection('recent_views')
-        .doc(scanId);
-
-    await docRef.set({
-      'scanId': scanId,
-      'patientId': patientId,
-      'lastAccessed': FieldValue.serverTimestamp(),
-      'scanPath': scanPath,
-    }, SetOptions(merge: true));
+        .doc(scanId)
+        .set({
+          'scanId': scanId,
+          'patientId': patientId,
+          'patientName': patientName,
+          'imageUrl': imageUrl,
+          'scanDate': Timestamp.fromDate(scanDate),
+          'lastAccessed': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
   }
 
   Stream<QuerySnapshot> getRecentlyAccessedScansStream() {
@@ -394,16 +398,18 @@ class DatabaseService {
         .get();
 
     for (var patientDoc in patientsSnap.docs) {
+      final patientId = patientDoc.id;
       final scansSnap = await patientDoc.reference.collection('scans').get();
 
       for (var scanDoc in scansSnap.docs) {
+        final scanId = scanDoc.id;
         final data = scanDoc.data();
         allDoctorScans.add({
-          'name': data['patientName'],
+          'name': data['patientName'] ?? 'Unknown Patient',
           'date': (data['createdAt'] as Timestamp).toDate(),
           'imageUrl': data['imageUrl'],
-          'patientId': data['patientId'],
-          'scanId': data['scanId'],
+          'patientId': patientId,
+          'scanId': scanId,
         });
       }
     }

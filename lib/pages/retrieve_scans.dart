@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/database_service.dart';
+import '../pages/xray_result.dart';
 
 class AllScansPage extends StatefulWidget {
   const AllScansPage({super.key});
@@ -229,50 +230,71 @@ class _AllScansPageState extends State<AllScansPage> {
     final bgColor = isPinned ? darkNavy : bgGrey;
     final textColor = isPinned ? white : Colors.black87;
 
-    return Container(
-      height: isPinned ? 80 : 72,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Row(
-        children: [
-          SizedBox(
-            width: isPinned ? 75 : 72,
-            child: scan['imageUrl'] != null && scan['imageUrl'] != ''
-                ? Image.network(scan['imageUrl'], fit: BoxFit.cover)
-                : Image.asset('assets/images/xray.png', fit: BoxFit.cover),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  scan['name'],
-                  style: poppins(
-                    size: 14,
-                    color: textColor,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  _formatDate(scan['date']),
-                  style: poppins(
-                    size: 12,
-                    color: isPinned ? Colors.white60 : grey,
-                  ),
-                ),
-              ],
+    return InkWell(
+      onTap: () async {
+        await DatabaseService().logRecentScanView(
+          scanId: scan['scanId'],
+          patientId: scan['patientId'],
+          patientName: scan['name'],
+          imageUrl: scan['imageUrl'],
+          scanDate: scan['date'],
+        );
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => XrayResultPage(
+              patientId: scan['patientId'],
+              scanId: scan['scanId'],
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.only(right: 14),
-            child: Icon(Icons.arrow_forward_ios, size: 13, color: grey),
-          ),
-        ],
+        );
+      },
+      child: Container(
+        height: isPinned ? 80 : 72,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Row(
+          children: [
+            SizedBox(
+              width: isPinned ? 75 : 72,
+              child: scan['imageUrl'] != null && scan['imageUrl'] != ''
+                  ? Image.network(scan['imageUrl'], fit: BoxFit.cover)
+                  : Image.asset('assets/images/xray.png', fit: BoxFit.cover),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    scan['name'],
+                    style: poppins(
+                      size: 14,
+                      color: textColor,
+                      weight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    _formatDate(scan['date']),
+                    style: poppins(
+                      size: 12,
+                      color: isPinned ? Colors.white60 : grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(right: 14),
+              child: Icon(Icons.arrow_forward_ios, size: 13, color: grey),
+            ),
+          ],
+        ),
       ),
     );
   }

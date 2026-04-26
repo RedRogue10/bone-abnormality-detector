@@ -23,16 +23,16 @@ class XrayResultPage extends StatefulWidget {
 }
 
 class _XrayResultPageState extends State<XrayResultPage> {
-  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color white       = Colors.white;
+  static const Color white = Colors.white;
 
   final DatabaseService _db = DatabaseService();
 
-  XrayScan?   _scan;
+  XrayScan? _scan;
   ScanResult? _result;
-  String?     _errorMessage;
-  bool        _isLoading = true;
+  String? _errorMessage;
+  bool _isLoading = true;
 
   int _currentImageIndex = 0;
   static const int _imageCount = 2;
@@ -46,9 +46,18 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Future<void> _loadScan() async {
     try {
       final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
-      if (mounted) setState(() { _scan = scan; _result = scan.result; _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _scan = scan;
+          _result = scan.result;
+          _isLoading = false;
+        });
     } catch (e) {
-      if (mounted) setState(() { _errorMessage = e.toString(); _isLoading = false; });
+      if (mounted)
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
     }
   }
 
@@ -71,7 +80,8 @@ class _XrayResultPageState extends State<XrayResultPage> {
                 BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                   child: ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.55)),
+                    color: Colors.black.withValues(alpha: 0.55),
+                  ),
                 ),
                 Center(
                   child: GestureDetector(
@@ -108,8 +118,10 @@ class _XrayResultPageState extends State<XrayResultPage> {
         children: [
           Icon(Icons.layers_outlined, color: Colors.white38, size: 64),
           SizedBox(height: 12),
-          Text('CAM overlay coming soon',
-              style: TextStyle(color: Colors.white38, fontSize: 13)),
+          Text(
+            'CAM overlay coming soon',
+            style: TextStyle(color: Colors.white38, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -128,8 +140,11 @@ class _XrayResultPageState extends State<XrayResultPage> {
       loadingBuilder: (context, child, progress) => progress == null
           ? child
           : const Center(child: CircularProgressIndicator(color: Colors.white)),
-      errorBuilder: (context, error, stack) =>
-          const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
+      errorBuilder: (context, error, stack) => const Icon(
+        Icons.broken_image_outlined,
+        color: Colors.white38,
+        size: 64,
+      ),
     );
   }
 
@@ -138,14 +153,19 @@ class _XrayResultPageState extends State<XrayResultPage> {
       children: [
         SizedBox(
           width: 110,
-          child: Text(label,
-              style: GoogleFonts.poppins(
-                  color: primaryBlue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14)),
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: primaryBlue,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
         ),
-        Text(confidence,
-            style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87)),
+        Text(
+          confidence,
+          style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+        ),
       ],
     );
   }
@@ -153,37 +173,47 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Widget _buildTextResult() {
     final result = _result!;
     final isAbnormal = result.hasAbnormality;
-    final label = isAbnormal ? 'ABNORMALITY DETECTED' : 'NO ABNORMALITY DETECTED';
+    final label = isAbnormal
+        ? 'ABNORMALITY DETECTED'
+        : 'NO ABNORMALITY DETECTED';
     final confidenceText =
         '${((isAbnormal ? result.abnormalityConfidence : 1.0 - result.abnormalityConfidence) * 100).toStringAsFixed(1)}% Confidence';
-    final topPrediction =
-        result.topPredictions.isNotEmpty ? result.topPredictions.first : null;
+    final topPrediction = result.topPredictions.isNotEmpty
+        ? result.topPredictions.first
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Center(
-          child: Text(label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                  color: isAbnormal ? Colors.red : primaryBlue,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 22,
-                  letterSpacing: 1.2)),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: isAbnormal ? Colors.red : primaryBlue,
+              fontWeight: FontWeight.w500,
+              fontSize: 22,
+              letterSpacing: 1.2,
+            ),
+          ),
         ),
         const SizedBox(height: 4),
         Center(
-          child: Text(confidenceText,
-              style: GoogleFonts.poppins(
-                  fontSize: 14, color: Colors.black87)),
+          child: Text(
+            confidenceText,
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+          ),
         ),
         const SizedBox(height: 24),
-        Text('BONE PART DETECTED',
-            style: GoogleFonts.oswald(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                letterSpacing: 1.2)),
+        Text(
+          'BONE PART DETECTED',
+          style: GoogleFonts.oswald(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            letterSpacing: 1.2,
+          ),
+        ),
         const SizedBox(height: 12),
         if (topPrediction != null)
           _buildBonePart(
@@ -195,26 +225,24 @@ class _XrayResultPageState extends State<XrayResultPage> {
   }
 
   PreferredSizeWidget _buildAppBar() => AppBar(
-        backgroundColor: darkNavy,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.chevron_left, color: white, size: 28),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text('RESULTS',
-            style: GoogleFonts.oswald(
-                color: white,
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                letterSpacing: 2)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: white),
-            onPressed: () {},
-          ),
-        ],
-      );
+    backgroundColor: darkNavy,
+    elevation: 0,
+    leading: IconButton(
+      icon: const Icon(Icons.chevron_left, color: white, size: 28),
+      onPressed: () => Navigator.pop(context),
+    ),
+    title: Text(
+      'RESULTS',
+      style: GoogleFonts.oswald(color: white, fontSize: 20, letterSpacing: 1.5),
+    ),
+    centerTitle: true,
+    actions: [
+      IconButton(
+        icon: const Icon(Icons.account_circle_outlined, color: white),
+        onPressed: () {},
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -247,23 +275,36 @@ class _XrayResultPageState extends State<XrayResultPage> {
               children: [
                 const Icon(Icons.error_outline, color: Colors.red, size: 48),
                 const SizedBox(height: 12),
-                Text('Failed to load scan',
-                    style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  'Failed to load scan',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(_errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                        fontSize: 13, color: Colors.black54)),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: darkNavy),
                   onPressed: () {
-                    setState(() { _errorMessage = null; _isLoading = true; });
+                    setState(() {
+                      _errorMessage = null;
+                      _isLoading = true;
+                    });
                     _loadScan();
                   },
-                  child: Text('Retry',
-                      style: GoogleFonts.poppins(color: white)),
+                  child: Text(
+                    'Retry',
+                    style: GoogleFonts.poppins(color: white),
+                  ),
                 ),
               ],
             ),
@@ -285,9 +326,10 @@ class _XrayResultPageState extends State<XrayResultPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Date
-            Text('$dateStr Results',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, color: Colors.black87)),
+            Text(
+              '$dateStr Results',
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+            ),
             const SizedBox(height: 14),
 
             // X-ray image
@@ -318,8 +360,11 @@ class _XrayResultPageState extends State<XrayResultPage> {
                       setState(() => _currentImageIndex--);
                     }
                   },
-                  child: const Icon(Icons.chevron_left,
-                      color: Colors.black54, size: 24),
+                  child: const Icon(
+                    Icons.chevron_left,
+                    color: Colors.black54,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 ...List.generate(_imageCount, (i) {
@@ -344,8 +389,11 @@ class _XrayResultPageState extends State<XrayResultPage> {
                       setState(() => _currentImageIndex++);
                     }
                   },
-                  child: const Icon(Icons.chevron_right,
-                      color: Colors.black54, size: 24),
+                  child: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.black54,
+                    size: 24,
+                  ),
                 ),
               ],
             ),
