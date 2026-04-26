@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -35,10 +36,11 @@ class _XrayInfoState extends State<XrayInfo> {
   final TextEditingController _searchCtrl = TextEditingController();
   final FocusNode             _searchFocus = FocusNode();
 
-  ScanResult? _result;
-  String?     _errorMessage;
-  bool        _isLoading = true;
-  bool        _saving    = false;
+  ScanResult?  _result;
+  Uint8List?   _camImage;
+  String?      _errorMessage;
+  bool         _isLoading = true;
+  bool         _saving    = false;
 
   Patient?      _selectedPatient;
   List<Patient> _allPatients   = [];
@@ -67,8 +69,12 @@ class _XrayInfoState extends State<XrayInfo> {
 
   Future<void> _runAnalysis() async {
     try {
-      final result = await _processor.analyzeImage(widget.imageFile);
-      if (mounted) setState(() { _result = result; _isLoading = false; });
+      final output = await _processor.analyzeImage(widget.imageFile);
+      if (mounted) setState(() {
+        _result   = output.result;
+        _camImage = output.camImage;
+        _isLoading = false;
+      });
     } catch (e) {
       if (mounted) setState(() { _errorMessage = e.toString(); _isLoading = false; });
     }
@@ -122,11 +128,28 @@ class _XrayInfoState extends State<XrayInfo> {
         patientId: _selectedPatient!.id,
         imageFile: widget.imageFile,
       );
-      await _db.updateXrayScanResult(
-        patientId: _selectedPatient!.id,
-        scanId: scanId,
-        result: _result!,
-      );
+
+      if (_camImage != null) {
+        // Write CAM bytes to a temp file, upload via attachAIResultToScan
+        final tempFile = File(
+          '${Directory.systemTemp.path}/cam_${scanId}_overlay.png',
+        );
+        await tempFile.writeAsBytes(_camImage!);
+        await _db.attachAIResultToScan(
+          patientId: _selectedPatient!.id,
+          scanId: scanId,
+          generatedImages: [tempFile],
+          resultData: _result!,
+        );
+        await tempFile.delete();
+      } else {
+        await _db.updateXrayScanResult(
+          patientId: _selectedPatient!.id,
+          scanId: scanId,
+          result: _result!,
+        );
+      }
+
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
@@ -193,6 +216,9 @@ class _XrayInfoState extends State<XrayInfo> {
   Widget _buildImageForIndex(int index) {
     if (index == 0) {
       return Image.file(widget.imageFile, fit: BoxFit.contain);
+    }
+    if (_camImage != null) {
+      return Image.memory(_camImage!, fit: BoxFit.contain);
     }
     return const Center(
       child: Column(

@@ -5,8 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/kotlin/com/example/bone_abnormality_detector/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/src/main/kotlin/com/example/bone_abnormality_detector/MainActivity.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/pages/xray_info.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/xray_info.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/pages/xray_result.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/xray_result.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/services/model_processing.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/model_processing.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -73,7 +77,7 @@
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "yolo__model__integration",
+    "git-widget-placeholder": "eigen-cam-integration",
     "io.flutter.project.isFirstOpen": "true",
     "io.flutter.reload.alreadyRun": "true",
     "kotlin-language-version-configured": "true",
