@@ -5,22 +5,80 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:bone_abnormality_detector/firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:go_router/go_router.dart';
 
 import 'pages/dashboard.dart';
-import 'pages/patient_list.dart';
 import 'pages/xray_result.dart';
 import 'pages/camera_capture.dart';
 import 'pages/splash_screen.dart';
 import 'pages/reset_password.dart';
 import 'pages/login.dart';
+import 'web/patient_web_view.dart';
 
 import 'services/database_service.dart';
+import 'services/sharing_service.dart';
+import 'services/email_service.dart';
 
 import 'models/bone_prediction.dart';
 import 'models/scan_result.dart';
 
+import 'url_strategy_noop.dart' if (dart.library.html) 'url_strategy_web.dart';
+
+final GoRouter _router = GoRouter(
+  initialLocation: '/',
+
+  redirect: (context, state) {
+    final loggedIn = FirebaseAuth.instance.currentUser != null;
+    final path = state.uri.path;
+    print("REDIRECTIONS: Target is ${state.uri.path}");
+
+    // 1. ALWAYS allow the public route first, no matter what
+    if (path == '/view-results') {
+      return null;
+    }
+
+    // 2. Auth Logic for the Doctor App
+    final isLoggingIn = path == '/';
+
+    if (!loggedIn && !isLoggingIn) {
+      // Not logged in and trying to access dashboard? Go to login.
+      return '/';
+    }
+
+    if (loggedIn && isLoggingIn) {
+      // Already logged in? Skip the login page.
+      return '/dashboard';
+    }
+
+    return null;
+  },
+
+  routes: [
+    // Login
+    GoRoute(path: '/', builder: (context, state) => const LoginPage()),
+
+    // Dashboard
+    GoRoute(
+      path: '/dashboard',
+      builder: (context, state) => const DashboardPage(),
+    ),
+
+    // X-ray view page (EMAIL LINK TARGET)
+    GoRoute(
+      path: '/view-results',
+      builder: (context, state) {
+        final v = state.uri.queryParameters['v']!;
+
+        print("Returning Web View");
+        return PatientWebView(shortId: v);
+      },
+    ),
+  ],
+);
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  setupUrlStrategy();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
@@ -34,30 +92,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Bone abnormality detector',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A73E9)),
         useMaterial3: true,
       ),
-      // Uncomment line below to show the login page if no user is logged in
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          if (snapshot.hasData) {
-            return const DashboardPage();
-          } else {
-            return const LoginPage();
-          }
-        },
-      ),
-      // home: const HomePage(),
+      routerConfig: _router,
     );
   }
 }
@@ -124,6 +165,7 @@ class HomePage extends StatelessWidget {
         BonePrediction(bonePart: "Hand", confidence: 0.97),
       ],
       generatedAt: DateTime.now(),
+      interpretation: '',
     );
 
     await DatabaseService().updateXrayScanResult(
@@ -174,12 +216,14 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              // Patient List button
+
               ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const PatientListPage()),
+                  String interpretation = 'Doctor\'s interpretation';
+                  DatabaseService().updateInterpretation(
+                    patientId: 'FmnTTC426eN34O1mhSta',
+                    scanId: 'i1tyaiyv904tPBj6DS1R',
+                    interpretation: interpretation,
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -195,7 +239,7 @@ class HomePage extends StatelessWidget {
                   elevation: 4,
                 ),
                 child: const Text(
-                  'Go to Patient List',
+                  'Update Interpretation',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -363,7 +407,6 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 16),
 
               // Information Page button
-              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
@@ -424,6 +467,54 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+
+              ElevatedButton(
+                onPressed: () async {
+                  final sharingService = SharingService();
+
+                  // Generate the link
+                  String secureLink = await sharingService.generateSecureLink(
+                    doctorId: 'Lh2WuYR8UjUAOWOUXRh20mfAFLJ2',
+                    patientId: 'FmnTTC426eN34O1mhSta',
+                    scanId: 'i1tyaiyv904tPBj6DS1R',
+                  );
+                  final emailservice = EmailService();
+
+                  // Pass link to email function
+                  await emailservice.sendEmailLink(
+                    'kslabao@up.edu.ph',
+                    secureLink,
+                  );
+                  print('LINK: ${secureLink}');
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Secure link sent to patient!"),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF0B2545),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 40,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 4,
+                ),
+                child: const Text(
+                  'Send Email Link',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
