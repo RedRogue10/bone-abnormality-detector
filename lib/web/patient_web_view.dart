@@ -1,10 +1,24 @@
 import 'package:flutter/material.dart';
 import '../services/web_service.dart';
 
-class PatientWebView extends StatelessWidget {
+class PatientWebView extends StatefulWidget {
   final String shortId;
 
   const PatientWebView({super.key, required this.shortId});
+
+  @override
+  State<PatientWebView> createState() => _PatientWebViewState();
+}
+
+class _PatientWebViewState extends State<PatientWebView> {
+  late final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +27,7 @@ class PatientWebView extends StatelessWidget {
       body: SafeArea(
         child: FutureBuilder<Map<String, dynamic>?>(
           // Gets the scan using the id
-          future: WebService().fetchByShortId(shortId),
+          future: WebService().fetchByShortId(widget.shortId),
           builder: (context, snapshot) {
             // Loading State
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -75,8 +89,13 @@ class PatientWebView extends StatelessWidget {
                             // X-Ray Scan Result label
                             _buildSectionLabel('X-RAY SCAN RESULT'),
 
-                            // X-Ray Image 
-                            _buildXrayImage(data['imageUrl']),
+                            // X-Ray Image
+                            // Sample assets for UI testing 
+                            _buildImageCarousel([
+                              {'asset': 'assets/images/xray.png', 'label': 'X-Ray'},
+                              {'asset': 'assets/images/xray.png', 'label': 'Grad-CAM Result'},
+                              {'asset': 'assets/images/xray.png', 'label': 'Heatmap Overlay'},
+                            ]),
 
                             const SizedBox(height: 20),
 
@@ -131,6 +150,7 @@ class PatientWebView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
+          // Logo
           Container(
             width: 48,
             height: 48,
@@ -149,28 +169,69 @@ class PatientWebView extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Bone X-Ray Reader',
-                style: TextStyle(
-                  fontFamily: 'Georgia',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+          // Title
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'X-Ray Reader',
+                  style: TextStyle(
+                    fontFamily: 'Georgia',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-              SizedBox(height: 2),
-              Text(
-                'Secure Medical Report · Encrypted Delivery',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Color(0x99FFFFFF),
-                  letterSpacing: 0.3,
+                SizedBox(height: 2),
+                Text(
+                  'Bone Abnormality Detector',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0x99FFFFFF),
+                    letterSpacing: 0.3,
+                  ),
                 ),
+              ],
+            ),
+          ),
+          // Save as PDF button
+          GestureDetector(
+            onTap: () {},
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
               ),
-            ],
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.25),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.picture_as_pdf_outlined,
+                    size: 15,
+                    color: Colors.white,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Save as PDF',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -191,7 +252,7 @@ class PatientWebView extends StatelessWidget {
               _MetaLabel(text: 'PATIENT'),
               SizedBox(height: 3),
               Text(
-                'Juan Dela Cruz', 
+                'Juan Dela Cruz',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -201,7 +262,7 @@ class PatientWebView extends StatelessWidget {
               _MetaLabel(text: 'PATIENT ID'),
               SizedBox(height: 3),
               Text(
-                'PT-0000-00000', 
+                'PT-0000-00000',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -216,7 +277,7 @@ class PatientWebView extends StatelessWidget {
               _MetaLabel(text: 'SCAN DATE'),
               SizedBox(height: 3),
               Text(
-                'January 1, 2026', 
+                'January 1, 2026',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -226,7 +287,7 @@ class PatientWebView extends StatelessWidget {
               _MetaLabel(text: 'SCAN ID'),
               SizedBox(height: 3),
               Text(
-                'SC-0000-00000', 
+                'SC-0000-00000',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -256,28 +317,115 @@ class PatientWebView extends StatelessWidget {
     );
   }
 
-  // X-Ray image
-  Widget _buildXrayImage(String imageUrl) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: InteractiveViewer(
-          child: Image.network(
-            imageUrl,
-            width: double.infinity,
-            height: 280,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              return const SizedBox(
-                height: 280,
-                child: Center(child: CircularProgressIndicator()),
-              );
-            },
+  // Image carousel
+  Widget _buildImageCarousel(List<Map<String, String>> scanImages) {
+    if (scanImages.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Container(
+          width: double.infinity,
+          height: 180,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F5F5),
+            border: Border.all(color: const Color(0xFFE2E2DC)),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Center(
+            child: Text(
+              'No scan images available',
+              style: TextStyle(fontSize: 12, color: Color(0xFF9E9E94)),
+            ),
           ),
         ),
-      ),
+      );
+    }
+
+    return Column(
+      children: [
+        // Image label + counter
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                scanImages[_currentPage]['label']!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1C2B3A),
+                ),
+              ),
+              Text(
+                '${_currentPage + 1} / ${scanImages.length}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF9E9E94),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Swipeable images 
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: SizedBox(
+              height: 280,
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: (index) =>
+                    setState(() => _currentPage = index),
+                itemCount: scanImages.length,
+                itemBuilder: (context, index) {
+                  final asset = scanImages[index]['asset'] ?? '';
+                  return Image.asset(
+                    asset,
+                    width: double.infinity,
+                    height: 280,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, _, __) => Container(
+                      color: const Color(0xFF0A0A0A),
+                      child: const Center(
+                        child: Text(
+                          'Image unavailable',
+                          style: TextStyle(
+                            color: Color(0xFF555555),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+
+        // Dot indicators
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(scanImages.length, (index) {
+            final isActive = index == _currentPage;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: isActive ? 20 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF1C2B3A)
+                    : const Color(0xFFCDD8E3),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 
@@ -293,7 +441,7 @@ class PatientWebView extends StatelessWidget {
         ),
         padding: const EdgeInsets.all(16),
         child: Text(
-          'The scan of the left elbow reveals no acute fracture or dislocation. The distal humerus, radial head, and olecranon appear structurally intact. Joint space is preserved with no significant narrowing. Mild soft tissue swelling noted around the lateral epicondyle, suggestive of early epicondylitis. No loose bodies or calcific deposits identified.\n\nRecommend conservative management with rest and anti-inflammatory therapy. Physical therapy may be considered if symptoms persist beyond 4–6 weeks. No surgical intervention required at this time.',
+          interpretation,
           style: const TextStyle(
             fontSize: 13,
             height: 1.75,
@@ -326,7 +474,7 @@ class PatientWebView extends StatelessWidget {
               ),
               child: const Center(
                 child: Text(
-                  'JR', 
+                  'JR',
                   style: TextStyle(
                     color: Color(0xFF1C2B3A),
                     fontSize: 12,
@@ -341,7 +489,7 @@ class PatientWebView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'Dr. Jose Reyes', 
+                  'Dr. Jose Reyes',
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
@@ -350,7 +498,7 @@ class PatientWebView extends StatelessWidget {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Radiologist', 
+                  'Radiologist',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
