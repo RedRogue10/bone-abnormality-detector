@@ -11,14 +11,7 @@ class PatientWebView extends StatefulWidget {
 }
 
 class _PatientWebViewState extends State<PatientWebView> {
-  late final PageController _pageController = PageController();
   int _currentPage = 0;
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,11 +83,11 @@ class _PatientWebViewState extends State<PatientWebView> {
                             _buildSectionLabel('X-RAY SCAN RESULT'),
 
                             // X-Ray Image
-                            // Sample assets for UI testing 
+                            // Sample assets for UI testing — TODO: replace with backend data
                             _buildImageCarousel([
-                              {'asset': 'assets/images/xray.png', 'label': 'X-Ray'},
-                              {'asset': 'assets/images/xray.png', 'label': 'Grad-CAM Result'},
-                              {'asset': 'assets/images/xray.png', 'label': 'Heatmap Overlay'},
+                              {'asset': 'assets/images/xray.png',    'label': 'X-Ray'},
+                              {'asset': 'assets/images/gradcam.png', 'label': 'Grad-CAM Result'},
+                              {'asset': 'assets/images/heatmap.png', 'label': 'Heatmap Overlay'},
                             ]),
 
                             const SizedBox(height: 20),
@@ -196,6 +189,7 @@ class _PatientWebViewState extends State<PatientWebView> {
             ),
           ),
           // Save as PDF button
+          // TODO: implement PDF save on tap
           GestureDetector(
             onTap: () {},
             child: Container(
@@ -367,41 +361,78 @@ class _PatientWebViewState extends State<PatientWebView> {
           ),
         ),
 
-        // Swipeable images 
+        // swipeable image 
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: SizedBox(
-              height: 280,
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: (index) =>
-                    setState(() => _currentPage = index),
-                itemCount: scanImages.length,
-                itemBuilder: (context, index) {
-                  final asset = scanImages[index]['asset'] ?? '';
-                  return Image.asset(
-                    asset,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Image.asset(
+                  scanImages[_currentPage]['asset'] ?? '',
+                  width: double.infinity,
+                  height: 280,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, _, __) => Container(
                     width: double.infinity,
                     height: 280,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, _, __) => Container(
-                      color: const Color(0xFF0A0A0A),
-                      child: const Center(
-                        child: Text(
-                          'Image unavailable',
-                          style: TextStyle(
-                            color: Color(0xFF555555),
-                            fontSize: 12,
-                          ),
+                    color: const Color(0xFF0A0A0A),
+                    child: const Center(
+                      child: Text(
+                        'Image unavailable',
+                        style: TextStyle(
+                          color: Color(0xFF555555),
+                          fontSize: 12,
                         ),
                       ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
+              // Previous button
+              if (_currentPage > 0)
+                Positioned(
+                  left: 8,
+                  child: GestureDetector(
+                    onTap: () => setState(() => _currentPage--),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1C2B3A).withOpacity(0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              // Next button
+              if (_currentPage < scanImages.length - 1)
+                Positioned(
+                  right: 8,
+                  child: GestureDetector( 
+                    onTap: () => setState(() => _currentPage++),
+                    child: Container( 
+                      width: 32, 
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1C2B3A).withOpacity(0.7), 
+                        shape: BoxShape.circle, 
+                      ),
+                      child: const Icon(
+                        Icons.chevron_right, 
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
 
