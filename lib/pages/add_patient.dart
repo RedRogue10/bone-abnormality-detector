@@ -19,7 +19,6 @@ class _AddPatientPageState extends State<AddPatientPage> {
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _middleNameCtrl = TextEditingController();
-  final _sexCtrl = TextEditingController();
   final _dobCtrl = TextEditingController();
   final _contactCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
@@ -32,7 +31,7 @@ class _AddPatientPageState extends State<AddPatientPage> {
   final List<PatientHistoryRecord> _historyRecords = [];
 
   // Default
-  String selectedSex = "Male";
+  String selectedGender = 'Male';
   DateTime selectedDate = DateTime.now();
 
   static const List<String> _monthNames = [
@@ -65,7 +64,6 @@ class _AddPatientPageState extends State<AddPatientPage> {
       _firstNameCtrl,
       _lastNameCtrl,
       _middleNameCtrl,
-      _sexCtrl,
       _dobCtrl,
       _contactCtrl,
       _addressCtrl,
@@ -105,7 +103,7 @@ class _AddPatientPageState extends State<AddPatientPage> {
         middleName: _middleNameCtrl.text.trim().isEmpty
             ? null
             : _middleNameCtrl.text.trim(),
-        sex: _sexCtrl.text.trim(),
+        sex: selectedGender,
         birthDate: _parseDate(_dobCtrl.text.trim()),
         contactNumber: _contactCtrl.text.trim().isEmpty
             ? null
@@ -159,6 +157,75 @@ class _AddPatientPageState extends State<AddPatientPage> {
     isDate: isDate,
   );
 
+  Widget _buildGenderField() {
+    const Color darkNavy    = Color(0xFF0B2545);
+    const Color primaryBlue = Color(0xFF1A73E9);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Sex*',
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: ['Male', 'Female'].map((option) {
+              final selected = selectedGender == option;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => selectedGender = option),
+                  child: Container(
+                    margin: EdgeInsets.only(right: option == 'Male' ? 8 : 0),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? primaryBlue.withOpacity(0.08)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: selected ? primaryBlue : const Color(0xFFDDE6F0),
+                        width: selected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          selected
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_off,
+                          size: 18,
+                          color: selected ? primaryBlue : Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          option,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            color: selected ? primaryBlue : darkNavy,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -189,7 +256,7 @@ class _AddPatientPageState extends State<AddPatientPage> {
               _field('First Name*', _firstNameCtrl),
               _field('Last Name*', _lastNameCtrl),
               _field('Middle Name', _middleNameCtrl),
-              _field('Sex*', _sexCtrl),
+              _buildGenderField(),
               _field('Date of Birth*', _dobCtrl, isDate: true),
               _field(
                 'Contact Number',
