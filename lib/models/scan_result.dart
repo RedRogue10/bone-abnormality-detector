@@ -11,12 +11,15 @@ class ScanResult {
 
   final DateTime generatedAt;
 
+  final String interpretation;
+
   ScanResult({
     required this.generatedImageUrls,
     required this.topPredictions,
     required this.hasAbnormality,
     required this.abnormalityConfidence,
     required this.generatedAt,
+    required this.interpretation,
   });
 
   Map<String, dynamic> toMap() {
@@ -30,6 +33,8 @@ class ScanResult {
       'abnormalityDetectionConfidence': abnormalityConfidence,
 
       'generatedAt': Timestamp.fromDate(generatedAt),
+
+      'interpretation': interpretation,
     };
   }
 
@@ -50,6 +55,8 @@ class ScanResult {
           .toDouble(),
 
       generatedAt: (map['generatedAt'] as Timestamp).toDate(),
+
+      interpretation: map['interpretation'],
     );
   }
 
@@ -59,6 +66,7 @@ class ScanResult {
     double? abnormalityDetectionConfidence,
     List<BonePrediction>? topPredictions,
     DateTime? generatedAt,
+    String? interpretation,
   }) {
     return ScanResult(
       generatedImageUrls: generatedImageUrls ?? this.generatedImageUrls,
@@ -67,6 +75,7 @@ class ScanResult {
           abnormalityDetectionConfidence ?? this.abnormalityConfidence,
       topPredictions: topPredictions ?? this.topPredictions,
       generatedAt: generatedAt ?? this.generatedAt,
+      interpretation: interpretation ?? this.interpretation,
     );
   }
 }
