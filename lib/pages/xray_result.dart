@@ -6,7 +6,11 @@ import 'package:intl/intl.dart';
 
 import '../models/scan_result.dart';
 import '../models/xray_scan.dart';
+
+import 'package:flutter/services.dart';
 import '../services/database_service.dart';
+import '../services/sharing_service.dart';
+import '../services/email_service.dart';
 
 class XrayResultPage extends StatefulWidget {
   final String patientId;
@@ -28,6 +32,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
   static const Color white = Colors.white;
 
   final DatabaseService _db = DatabaseService();
+  final SharingService _ss = SharingService();
 
   XrayScan? _scan;
   ScanResult? _result;
@@ -46,18 +51,106 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Future<void> _loadScan() async {
     try {
       final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _scan = scan;
           _result = scan.result;
           _isLoading = false;
         });
+      }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  void _showShareOptions() async {
+    final patientDoc = await _db.getPatientById(widget.patientId);
+    final patientEmail = patientDoc.email;
+    print(patientEmail);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        final hasEmail = patientEmail != null && patientEmail.trim().isNotEmpty;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // SEND TO EMAIL OPTION
+              ListTile(
+                enabled: hasEmail,
+                leading: Icon(
+                  Icons.email_outlined,
+                  color: hasEmail ? Colors.black87 : Colors.grey,
+                ),
+                title: Text(
+                  hasEmail
+                      ? 'Send to patient email'
+                      : 'No email available for this patient',
+                  style: TextStyle(
+                    color: hasEmail ? Colors.black87 : Colors.grey,
+                  ),
+                ),
+                onTap: hasEmail
+                    ? () {
+                        Navigator.pop(context);
+                        _sendEmailToPatient(patientEmail);
+                      }
+                    : null,
+              ),
+
+              // COPY LINK OPTION
+              ListTile(
+                leading: const Icon(Icons.link),
+                title: const Text('Copy link to clipboard'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _copyPublicLink();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _copyPublicLink() async {
+    final link = await _ss.generateSecureLink(
+      patientId: widget.patientId,
+      scanId: widget.scanId,
+    );
+    await Clipboard.setData(ClipboardData(text: link));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+  }
+
+  void _sendEmailToPatient(String email) async {
+    try {
+      final link = await _ss.generateSecureLink(
+        patientId: widget.patientId,
+        scanId: widget.scanId,
+      );
+      await EmailService().sendEmailLink(email, link);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Email sent to $email')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to send email: $e')));
     }
   }
 
@@ -238,8 +331,8 @@ class _XrayResultPageState extends State<XrayResultPage> {
     centerTitle: true,
     actions: [
       IconButton(
-        icon: const Icon(Icons.account_circle_outlined, color: white),
-        onPressed: () {},
+        icon: const Icon(Icons.ios_share, color: white),
+        onPressed: _showShareOptions,
       ),
     ],
   );

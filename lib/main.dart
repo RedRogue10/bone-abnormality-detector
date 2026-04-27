@@ -435,7 +435,6 @@ class HomePage extends StatelessWidget {
 
                   // Generate the link
                   String secureLink = await sharingService.generateSecureLink(
-                    doctorId: 'Lh2WuYR8UjUAOWOUXRh20mfAFLJ2',
                     patientId: 'FmnTTC426eN34O1mhSta',
                     scanId: 'i1tyaiyv904tPBj6DS1R',
                   );
