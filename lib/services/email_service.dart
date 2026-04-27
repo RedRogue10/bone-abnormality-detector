@@ -34,8 +34,11 @@ class EmailService {
           </p>
 
           <div style="text-align:center;">
-            <img src="../../assets/images/logo.png" width="120" />
-            <h2>X-Ray Reader</h2>
+            <img 
+              src="https://firebasestorage.googleapis.com/v0/b/bone-abnormality-detector.firebasestorage.app/o/branding%2Fblue_logo.png?alt=media&token=b9ac5081-69e6-4396-b912-3a9197f438eb"
+              width="120"
+            />
+            <h3>X-Ray Reader</h3>
           </div>
         </div>
       ''',

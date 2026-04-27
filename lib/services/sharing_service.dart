@@ -71,7 +71,7 @@ class SharingService {
         .collection('shared_links')
         .doc(shortId)
         .set({
-          'docId': user?.uid,
+          'docId': user!.uid,
           'pid': patientId,
           'scanId': scanId,
           'token': token,
