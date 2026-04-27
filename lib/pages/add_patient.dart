@@ -148,6 +148,7 @@ class _AddPatientPageState extends State<AddPatientPage> {
     TextEditingController ctrl, {
     TextInputType keyboardType = TextInputType.text,
     bool isDate = false,
+    
   }) => buildField(
     context: context,
     label: label,
@@ -169,7 +170,7 @@ class _AddPatientPageState extends State<AddPatientPage> {
           Text(
             'Sex*',
             style: GoogleFonts.poppins(
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -182,7 +183,7 @@ class _AddPatientPageState extends State<AddPatientPage> {
                   onTap: () => setState(() => selectedGender = option),
                   child: Container(
                     margin: EdgeInsets.only(right: option == 'Male' ? 8 : 0),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: selected
                           ? primaryBlue.withOpacity(0.08)
@@ -233,11 +234,10 @@ class _AddPatientPageState extends State<AddPatientPage> {
       appBar: buildAppBar(
         context: context,
         title: Text(
-          'Add Patient',
+          'ADD PATIENT',
           style: GoogleFonts.oswald(
             color: Colors.white,
             fontSize: 20,
-            letterSpacing: 1.5,
           ),
         ),
         actionLabel: 'SAVE',
@@ -250,8 +250,15 @@ class _AddPatientPageState extends State<AddPatientPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 28),
-              sectionTitle('Personal Information'),
+              const SizedBox(height: 8),
+              Text(
+                'Personal Information',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A73E9),
+                ),
+              ),
               const SizedBox(height: 12),
               _field('First Name*', _firstNameCtrl),
               _field('Last Name*', _lastNameCtrl),
@@ -268,7 +275,14 @@ class _AddPatientPageState extends State<AddPatientPage> {
               const SizedBox(height: 12),
               sectionDivider(),
               const SizedBox(height: 20),
-              sectionTitle('Patient History(Optional)'),
+              Text(
+                'Patient History (Optional)',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A73E9),
+                ),
+              ),
               const SizedBox(height: 12),
               buildHistorySection(
                 context: context,
@@ -282,7 +296,14 @@ class _AddPatientPageState extends State<AddPatientPage> {
               const SizedBox(height: 12),
               sectionDivider(),
               const SizedBox(height: 20),
-              sectionTitle('Emergency Contact'),
+              Text(
+                'Emergency Contact',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A73E9),
+                ),
+              ),
               const SizedBox(height: 12),
               _field('Name', _ecNameCtrl),
               _field(
