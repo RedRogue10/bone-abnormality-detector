@@ -46,31 +46,35 @@ class _EditPatientPageState extends State<EditPatientPage> {
   }
 
   Future<void> _loadPatient() async {
-    print('Loading patient with ID: ${widget.patientId}');
-    try {
-      _patient = await DatabaseService().getPatientById(widget.patientId);
-      _firstNameCtrl.text = _patient!.firstName;
-      _lastNameCtrl.text = _patient!.lastName;
-      _middleNameCtrl.text = _patient!.middleName ?? '';
-      selectedGender = _patient!.sex;
-      _dobCtrl.text = _formatDate(_patient!.birthDate);
-      _contactCtrl.text = _patient!.contactNumber ?? '';
-      _addressCtrl.text = _patient!.address ?? '';
-      _ecNameCtrl.text = _patient!.emergencyContact?.name ?? '';
-      _ecContactCtrl.text = _patient!.emergencyContact?.contactNumber ?? '';
-      _ecRelationshipCtrl.text = _patient!.emergencyContact?.relationship ?? '';
-      _historyRecords = List.from(_patient!.historyRecords);
-      setState(() => _isLoading = false);
-    } catch (e) {
-      // Handle error, perhaps show snackbar and pop
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to load patient: $e')));
-        Navigator.pop(context);
-      }
+  print('Loading patient with ID: ${widget.patientId}');
+  try {
+    _patient = await DatabaseService().getPatientById(widget.patientId);
+
+    _firstNameCtrl.text = _patient!.firstName;
+    _lastNameCtrl.text = _patient!.lastName;
+    _middleNameCtrl.text = _patient!.middleName ?? '';
+    selectedGender = _patient!.sex;
+    _dobCtrl.text = _formatDate(_patient!.birthDate);
+    _contactCtrl.text = _patient!.contactNumber ?? '';
+    _emailCtrl.text = _patient!.email ?? '';
+
+    _addressCtrl.text = _patient!.address ?? '';
+    _ecNameCtrl.text = _patient!.emergencyContact?.name ?? '';
+    _ecContactCtrl.text = _patient!.emergencyContact?.contactNumber ?? '';
+    _ecRelationshipCtrl.text = _patient!.emergencyContact?.relationship ?? '';
+
+    _historyRecords = List.from(_patient!.historyRecords);
+
+    setState(() => _isLoading = false);
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load patient: $e')),
+      );
+      Navigator.pop(context);
     }
   }
+}
 
   @override
   void dispose() {
@@ -247,7 +251,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
           Text(
             'Sex*',
             style: GoogleFonts.poppins(
-              fontSize: 16,
+              fontSize: 13,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -260,7 +264,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
                   onTap: () => setState(() => selectedGender = option),
                   child: Container(
                     margin: EdgeInsets.only(right: option == 'Male' ? 8 : 0),
-                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: selected
                           ? primaryBlue.withOpacity(0.08)
@@ -330,8 +334,15 @@ class _EditPatientPageState extends State<EditPatientPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 28),
-              sectionTitle('Personal Information'),
+              const SizedBox(height: 8),
+              Text(
+                'Personal Information',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A73E9),
+                ),
+              ),
               const SizedBox(height: 12),
               _field('First Name*', _firstNameCtrl),
               _field('Last Name*', _lastNameCtrl),
@@ -352,7 +363,14 @@ class _EditPatientPageState extends State<EditPatientPage> {
               const SizedBox(height: 12),
               sectionDivider(),
               const SizedBox(height: 20),
-              sectionTitle('Patient History'),
+              Text(
+                'Patient History',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A73E9),
+                ),
+              ),
               const SizedBox(height: 12),
               buildHistorySection(
                 context: context,
@@ -366,7 +384,14 @@ class _EditPatientPageState extends State<EditPatientPage> {
               const SizedBox(height: 12),
               sectionDivider(),
               const SizedBox(height: 20),
-              sectionTitle('Emergency Contact'),
+              Text(
+                'Emergency Contact',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: const Color(0xFF1A73E9),
+                ),
+              ),
               const SizedBox(height: 12),
               _field('Name', _ecNameCtrl),
               _field(

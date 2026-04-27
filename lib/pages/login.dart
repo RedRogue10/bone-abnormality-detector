@@ -15,15 +15,13 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   static const Color darkNavy      = Color(0xFF0B2545);
-  static const Color white       = Colors.white;
-  static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color hintGrey    = Color(0xFF8FA8C8);
-  static const Color fieldBorder = Color(0xFFDDE6F0);
+  static const Color white         = Colors.white;
+  static const Color hintGrey      = Color(0xFF8FA8C8);
+  static const Color fieldBorder   = Color(0xFFDDE6F0);
 
   final Auth _auth        = Auth();
   final _emailCtrl        = TextEditingController();
   final _passwordCtrl     = TextEditingController();
-  bool _rememberMe        = false;
   bool _obscurePass       = true;
   bool _isLoading         = false;
 
@@ -49,8 +47,6 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await _auth.signInWithEmailAndPassword(email, password);
-
-      // TODO: Implement "Remember Me"
 
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -135,46 +131,23 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 14),
 
-              // Remember me + Forgot password
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: Checkbox(
-                          value: _rememberMe,
-                          onChanged: (v) =>
-                              setState(() => _rememberMe = v ?? false),
-                          activeColor: primaryBlue,
-                          side: const BorderSide(color: hintGrey, width: 1.5),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4)),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Remember me',
-                        style: GoogleFonts.poppins(
-                            color: white, fontSize: 12),
-                      ),
-                    ],
+              // Forgot password 
+              Align(
+                alignment: Alignment.centerRight,
+                child: GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordPage()),
                   ),
-                  GestureDetector(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ForgotPasswordPage())
-                    ),
-                    child: Text(
-                      'Forgot Password?',
-                      style: GoogleFonts.poppins(color: white, fontSize: 12),
+                  child: Text(
+                    'Forgot Password?',
+                    style: GoogleFonts.poppins(
+                      color: white,
+                      fontSize: 12,
                     ),
                   ),
-                ],
+                ),
               ),
 
               const SizedBox(height: 60),
@@ -219,7 +192,7 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 28),
 
-              // Doesn't have account
+              // Signup link
               Center(
                 child: RichText(
                   text: TextSpan(
@@ -288,7 +261,7 @@ class _LoginPageState extends State<LoginPage> {
           border: InputBorder.none,
           isDense: true,
           contentPadding:
-              const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         ),
       ),
     );
