@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/foundation.dart'
+    show consolidateHttpClientResponseBytes;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -36,6 +40,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
 
   XrayScan? _scan;
   ScanResult? _result;
+  Uint8List? _camImageBytes;
   String? _errorMessage;
   bool _isLoading = true;
 
@@ -51,12 +56,28 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Future<void> _loadScan() async {
     try {
       final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
+      Uint8List? camBytes;
+      final camUrl = scan.result?.generatedImageUrls.isNotEmpty == true
+          ? scan.result!.generatedImageUrls.first
+          : null;
+      if (camUrl != null) {
+        try {
+          final request = await HttpClient().getUrl(Uri.parse(camUrl));
+          final response = await request.close();
+          camBytes = await consolidateHttpClientResponseBytes(response);
+        } catch (_) {}
+      }
       if (mounted) {
-        setState(() {
-          _scan = scan;
-          _result = scan.result;
-          _isLoading = false;
-        });
+        {
+          setState(() {
+            _scan = scan;
+
+            _result = scan.result;
+            _camImageBytes = camBytes;
+
+            _isLoading = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -205,6 +226,11 @@ class _XrayResultPageState extends State<XrayResultPage> {
 
   Widget _buildImageForIndex(int index) {
     if (index == 0) return _buildNetworkImage();
+
+    if (_camImageBytes != null) {
+      return Image.memory(_camImageBytes!, fit: BoxFit.contain);
+    }
+
     return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -212,7 +238,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
           Icon(Icons.layers_outlined, color: Colors.white38, size: 64),
           SizedBox(height: 12),
           Text(
-            'CAM overlay coming soon',
+            'CAM overlay not available',
             style: TextStyle(color: Colors.white38, fontSize: 13),
           ),
         ],
@@ -270,7 +296,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
         ? 'ABNORMALITY DETECTED'
         : 'NO ABNORMALITY DETECTED';
     final confidenceText =
-        '${((isAbnormal ? result.abnormalityConfidence : 1.0 - result.abnormalityConfidence) * 100).toStringAsFixed(1)}% Confidence';
+        '${(result.abnormalityConfidence * 100).toStringAsFixed(1)}% Abnormality Confidence';
     final topPrediction = result.topPredictions.isNotEmpty
         ? result.topPredictions.first
         : null;
