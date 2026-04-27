@@ -454,11 +454,7 @@ class _XrayInfoState extends State<XrayInfo> {
 
     final isAbnormal  = _result?.hasAbnormality ?? false;
     final headerColor = isAbnormal ? darkRed : green;
-    final displayConfidence =
-        (isAbnormal
-                ? _result!.abnormalityConfidence
-                : 1.0 - _result!.abnormalityConfidence) *
-            100;
+    final displayConfidence = _result!.abnormalityConfidence * 100;
 
     return Scaffold(
       backgroundColor: headerColor,
@@ -512,9 +508,9 @@ class _XrayInfoState extends State<XrayInfo> {
                             dimension: 250,
                             pointerColor: white,
                             graphColor: [
-                              Colors.red,
+                              Colors.green,
                               Colors.yellow,
-                              Colors.green
+                              Colors.red,
                             ],
                             animationDuration: 3000,
                           ),

@@ -181,8 +181,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
     final result = _result!;
     final isAbnormal = result.hasAbnormality;
     final label = isAbnormal ? 'ABNORMALITY DETECTED' : 'NO ABNORMALITY DETECTED';
-    final confidenceText =
-        '${((isAbnormal ? result.abnormalityConfidence : 1.0 - result.abnormalityConfidence) * 100).toStringAsFixed(1)}% Confidence';
+    final confidenceText = '${(result.abnormalityConfidence * 100).toStringAsFixed(1)}% Abnormality Confidence';
     final topPrediction =
         result.topPredictions.isNotEmpty ? result.topPredictions.first : null;
 

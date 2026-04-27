@@ -6,7 +6,9 @@ import 'package:flutter/services.dart';
 class CamProcessor {
   static const MethodChannel _channel = MethodChannel('bone_cam_processor');
 
-  static const Set<String> _availableParts = {'elbow', 'finger', 'forearm', 'wrist'};
+  static const Set<String> _availableParts = {
+    'elbow', 'finger', 'forearm', 'hand', 'humerus', 'shoulder', 'wrist',
+  };
 
   /// Returns a jet-colormap heatmap blended onto the original image as PNG bytes,
   /// or null if no CAM model exists for [bonePart] or inference fails.

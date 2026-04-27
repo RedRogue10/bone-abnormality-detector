@@ -15,7 +15,7 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
-import kotlin.math.abs
+import kotlin.math.sqrt
 
 class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
@@ -26,10 +26,13 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         private const val TAG = "CamPlugin"
         private const val CHANNEL = "bone_cam_processor"
         private val CAM_MODELS = mapOf(
-            "elbow"   to "flutter_assets/assets/models/elbow_cam.tflite",
-            "finger"  to "flutter_assets/assets/models/finger_cam.tflite",
-            "forearm" to "flutter_assets/assets/models/forearm_cam.tflite",
-            "wrist"   to "flutter_assets/assets/models/wrist_cam.tflite",
+            "elbow"    to "flutter_assets/assets/models/cam_elbow.tflite",
+            "finger"   to "flutter_assets/assets/models/cam_finger.tflite",
+            "forearm"  to "flutter_assets/assets/models/cam_forearm.tflite",
+            "hand"     to "flutter_assets/assets/models/cam_hand.tflite",
+            "humerus"  to "flutter_assets/assets/models/cam_humerus.tflite",
+            "shoulder" to "flutter_assets/assets/models/cam_shoulder.tflite",
+            "wrist"    to "flutter_assets/assets/models/cam_wrist.tflite",
         )
     }
 
@@ -88,84 +91,98 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             }
         }
 
-        // Auto-detect which output is predictions [1,2] vs cam_all [1,2,H,W]
+        // Auto-detect rank-2 (predictions) and rank-4 (feature map) outputs
         val numOutputs = interpreter.outputTensorCount
         Log.d(TAG, "Model has $numOutputs output(s)")
         var predIdx = -1
-        var camIdx  = -1
+        var featIdx = -1
         for (i in 0 until numOutputs) {
             val shape = interpreter.getOutputTensor(i).shape()
             Log.d(TAG, "  Output $i shape: ${shape.toList()}")
             when (shape.size) {
-                2    -> predIdx = i   // [1, numClasses]
-                4    -> camIdx  = i   // [1, C, H, W] or [1, H, W, C]
+                2 -> predIdx = i
+                4 -> featIdx = i
             }
         }
-        if (predIdx < 0 || camIdx < 0) {
+        if (predIdx < 0 || featIdx < 0) {
             throw IllegalStateException(
-                "Unexpected output tensors: found $numOutputs output(s), " +
-                "need one rank-2 (predictions) and one rank-4 (CAM)"
+                "Unexpected outputs: need rank-2 (predictions) and rank-4 (feature map), " +
+                "found $numOutputs output(s)"
             )
         }
 
-        val camShape = interpreter.getOutputTensor(camIdx).shape()
-        // Support both NCHW [1, C, H, W] and NHWC [1, H, W, C]
-        val numClasses: Int
-        val camH: Int
-        val camW: Int
-        if (camShape[1] < camShape[2] && camShape[1] < camShape[3]) {
-            // NCHW: classes is the small dim at index 1
-            numClasses = camShape[1]; camH = camShape[2]; camW = camShape[3]
-        } else {
-            // NHWC: classes is the small dim at index 3
-            numClasses = camShape[3]; camH = camShape[1]; camW = camShape[2]
-        }
-        val isNCHW = camShape[1] == numClasses
-        Log.d(TAG, "CAM idx=$camIdx shape=${camShape.toList()} isNCHW=$isNCHW camH=$camH camW=$camW")
+        // onnx2tf always outputs NHWC, so feature map is [1, H, W, C]
+        val featShape = interpreter.getOutputTensor(featIdx).shape()
+        val featH = featShape[1]
+        val featW = featShape[2]
+        val featC = featShape[3]
+        Log.d(TAG, "Feature map: [1, $featH, $featW, $featC]")
 
         val predShape = interpreter.getOutputTensor(predIdx).shape()
-        val out0: Array<FloatArray> = Array(predShape[0]) { FloatArray(predShape[1]) }
-        // Allocate CAM always as [1, numClasses, camH, camW] in NCHW layout
-        val out1Nchw: Array<Array<Array<FloatArray>>> =
-            Array(1) { Array(numClasses) { Array(camH) { FloatArray(camW) } } }
-        val out1Nhwc: Array<Array<Array<FloatArray>>> =
-            Array(1) { Array(camH) { Array(camW) { FloatArray(numClasses) } } }
+        val outPred: Array<FloatArray> = Array(predShape[0]) { FloatArray(predShape[1]) }
+        val outFeat: Array<Array<Array<FloatArray>>> =
+            Array(1) { Array(featH) { Array(featW) { FloatArray(featC) } } }
 
         val outputs = HashMap<Int, Any>()
-        outputs[predIdx] = out0
-        outputs[camIdx]  = if (isNCHW) out1Nchw else out1Nhwc
+        outputs[predIdx] = outPred
+        outputs[featIdx] = outFeat
         interpreter.runForMultipleInputsOutputs(arrayOf<Any>(inputBuf), outputs)
         interpreter.close()
 
-        // Resolve predicted class
-        val probs    = out0[0]
-        val classIdx = probs.indices.maxByOrNull { probs[it] } ?: 0
-        Log.d(TAG, "Predicted class=$classIdx probs=${probs.toList()}")
+        val probs = outPred[0]
+        Log.d(TAG, "Probs: ${probs.toList()}")
 
-        // Extract 2-D CAM grid [camH][camW]
-        val camGrid: Array<FloatArray> = if (isNCHW) {
-            out1Nchw[0][classIdx]
-        } else {
-            Array(camH) { y -> FloatArray(camW) { x -> out1Nhwc[0][y][x][classIdx] } }
+        // Eigen-CAM: power iteration to find dominant activation direction,
+        // then project the feature map onto it for the spatial heatmap.
+        val rows = featH * featW
+        var v = FloatArray(featC) { 1f / sqrt(featC.toFloat()) }
+        repeat(10) {
+            // mv = M @ v  [rows]
+            val mv = FloatArray(rows) { r ->
+                val y = r / featW; val x = r % featW
+                var s = 0f
+                for (c in 0 until featC) s += outFeat[0][y][x][c] * v[c]
+                s
+            }
+            // v_new = M^T @ mv  [featC]
+            val vNew = FloatArray(featC) { c ->
+                var s = 0f
+                for (r in 0 until rows) {
+                    val y = r / featW; val x = r % featW
+                    s += outFeat[0][y][x][c] * mv[r]
+                }
+                s
+            }
+            val norm = sqrt(vNew.fold(0f) { acc, f -> acc + f * f })
+            v = if (norm < 1e-8f) vNew else FloatArray(featC) { vNew[it] / norm }
         }
 
-        // Normalise
-        var minV =  Float.MAX_VALUE
-        var maxV = -Float.MAX_VALUE
-        for (row in camGrid) for (v in row) { if (v < minV) minV = v; if (v > maxV) maxV = v }
-        val range = if (abs(maxV - minV) < 1e-8f) 1f else maxV - minV
+        // Project each spatial position onto the dominant direction
+        val camGrid = Array(featH) { y ->
+            FloatArray(featW) { x ->
+                var s = 0f
+                for (c in 0 until featC) s += outFeat[0][y][x][c] * v[c]
+                s
+            }
+        }
 
-        // 1. Render jet colours into a small CAM-resolution bitmap
-        val camBitmap = Bitmap.createBitmap(camW, camH, Bitmap.Config.ARGB_8888)
-        for (y in 0 until camH) {
-            for (x in 0 until camW) {
-                val norm = ((camGrid[y][x] - minV) / range).coerceIn(0f, 1f)
+        // Clamp negatives and normalise to [0, 1]
+        for (row in camGrid) for (i in row.indices) if (row[i] < 0f) row[i] = 0f
+        var maxV = -Float.MAX_VALUE
+        for (row in camGrid) for (v2 in row) if (v2 > maxV) maxV = v2
+        val range = if (maxV < 1e-8f) 1f else maxV
+
+        // 1. Render jet colours at CAM resolution
+        val camBitmap = Bitmap.createBitmap(featW, featH, Bitmap.Config.ARGB_8888)
+        for (y in 0 until featH) {
+            for (x in 0 until featW) {
+                val norm = (camGrid[y][x] / range).coerceIn(0f, 1f)
                 val (hr, hg, hb) = jetColor(norm)
                 camBitmap.setPixel(x, y, (0xFF shl 24) or (hr shl 16) or (hg shl 8) or hb)
             }
         }
 
-        // 2. Bilinear-upscale to full image size → smooth radiating gradients
+        // 2. Bilinear-upscale to original image size
         val outW = originalBitmap.width
         val outH = originalBitmap.height
         val scaledCam = Bitmap.createScaledBitmap(camBitmap, outW, outH, true)
@@ -185,7 +202,7 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
         val baos = ByteArrayOutputStream()
         blended.compress(Bitmap.CompressFormat.PNG, 100, baos)
-        Log.d(TAG, "CAM overlay generated: ${baos.size()} bytes")
+        Log.d(TAG, "Eigen-CAM overlay generated: ${baos.size()} bytes")
         return baos.toByteArray()
     }
 
@@ -206,8 +223,7 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
-    // Piecewise-linear jet colormap matching matplotlib's definition.
-    // t=0 → dark blue, t=0.5 → yellow-green, t=1 → dark red.
+    // Piecewise-linear jet colormap: t=0 → dark blue, t=0.5 → cyan/green, t=1 → dark red.
     private fun jetColor(t: Float): Triple<Int, Int, Int> {
         val r = lerp(t, floatArrayOf(0f, 0.35f, 0.66f, 0.89f, 1f),
                         floatArrayOf(0f, 0f,    1f,    1f,    0.5f))
