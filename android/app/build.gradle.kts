@@ -45,3 +45,8 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    compileOnly("com.google.ai.edge.litert:litert:1.4.0")
+    compileOnly("androidx.exifinterface:exifinterface:1.3.7")
+}

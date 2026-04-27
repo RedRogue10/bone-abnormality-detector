@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/piage/AppData/Local/Pub/Cache/hosted/pub.dev/ultralytics_yolo-0.1.46/android/**)",
+      "Bash(flutter pub *)",
+      "Bash(flutter analyze *)",
+      "Bash(grep -v \"^$\")"
+    ]
+  }
+}

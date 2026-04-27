@@ -1,8 +1,11 @@
 import 'dart:developer';
 import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 import '../models/bone_prediction.dart';
 import '../models/scan_result.dart';
+import 'cam_processor.dart';
 
 // Must match the output label order of the bone-part classifier.
 enum BonePart {
@@ -14,12 +17,18 @@ enum BonePart {
   shoulder,
   wrist;
 
-  String get assetPath => 'assets/models/$name.tflite';
+  String get assetPath => 'flutter_assets/assets/models/$name.tflite';
   String get displayName => name[0].toUpperCase() + name.substring(1);
 }
 
+class AnalysisOutput {
+  final ScanResult result;
+  final Uint8List? camImage; // null when no CAM model exists for the detected bone part
+  const AnalysisOutput({required this.result, this.camImage});
+}
+
 class ModelProcessor {
-  static const String _classifierPath = 'assets/models/bone_classifier.tflite';
+  static const String _classifierPath = 'flutter_assets/assets/models/bone_classifier.tflite';
 
   YOLO? _classifier;
   YOLO? _abnormalityModel;
@@ -86,7 +95,7 @@ class ModelProcessor {
 
   // ── Full pipeline ────────────────────────────────────────────────────────
 
-  Future<ScanResult> analyzeImage(File imageFile) async {
+  Future<AnalysisOutput> analyzeImage(File imageFile) async {
     final predictions = await classifyBonePart(imageFile);
 
     final topLabel =
@@ -101,12 +110,19 @@ class ModelProcessor {
     log('[Classifier] bone=${predictions.isNotEmpty ? predictions.first.bonePart : "none"} conf=${predictions.isNotEmpty ? predictions.first.confidence : 0.0}');
     log('[Abnormality] hasAbnormality=${abnormality['hasAbnormality']} conf=${abnormality['confidence']}');
 
-    return ScanResult(
+    final scanResult = ScanResult(
       generatedImageUrls: [],
       topPredictions: predictions.take(3).toList(),
       hasAbnormality: abnormality['hasAbnormality'] as bool,
       abnormalityConfidence: abnormality['confidence'] as double,
-      generatedAt: DateTime.now(), interpretation: '',
+      generatedAt: DateTime.now(),
+      interpretation: '',
     );
+
+    // Stage 3 – CAM heatmap (best-effort; null if model unavailable)
+    final camImage = await CamProcessor().generateCAM(imageFile, bonePart.name);
+    log('[CAM] generated=${camImage != null} bytes=${camImage?.length ?? 0}');
+
+    return AnalysisOutput(result: scanResult, camImage: camImage);
   }
 }
