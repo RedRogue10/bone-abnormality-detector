@@ -56,13 +56,17 @@ class WebService {
     final doctorDoc = await _firestore.collection('users').doc(doctorId).get();
 
     final doctorData = doctorDoc.exists ? (doctorDoc.data() ?? {}) : {};
-
+    final first = (doctorData['firstName'] ?? '').toString();
+    final last = (doctorData['lastName'] ?? '').toString();
+    final fullName = "$first $last".trim();
+    final initials =
+        "${first.isNotEmpty ? first[0] : ''}${last.isNotEmpty ? last[0] : ''}"
+            .toUpperCase();
     // Merge everything + add doctorId/patientId/scanId
     return {
       'doctorId': doctorId,
-      'doctorName': doctorData['name'],
-      'doctorEmail': doctorData['email'],
-
+      'doctorFullName': fullName,
+      'doctorInitials': initials,
       'patientId': patientId,
       'scanId': scanId,
 

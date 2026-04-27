@@ -93,17 +93,8 @@ class _PatientWebViewState extends State<PatientWebView> {
                             _buildSectionLabel('X-RAY SCAN RESULT'),
 
                             // X-Ray Image
-                            // Sample assets for UI testing — TODO: replace with backend data
                             _buildImageCarousel([
                               {'asset': data['imageUrl'], 'label': 'X-Ray'},
-                              {
-                                'asset': 'assets/images/gradcam.png',
-                                'label': 'Grad-CAM Result',
-                              },
-                              {
-                                'asset': 'assets/images/heatmap.png',
-                                'label': 'Heatmap Overlay',
-                              },
                             ]),
 
                             const SizedBox(height: 20),
@@ -119,7 +110,10 @@ class _PatientWebViewState extends State<PatientWebView> {
                             const SizedBox(height: 12),
 
                             // Doctor card
-                            _buildDoctorCard(data['doctorName']),
+                            _buildDoctorCard(
+                              data['doctorFullName'],
+                              data['doctorInitials'],
+                            ),
 
                             const SizedBox(height: 4),
 
@@ -382,7 +376,7 @@ class _PatientWebViewState extends State<PatientWebView> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: Image.asset(
+                child: Image.network(
                   scanImages[_currentPage]['asset'] ?? '',
                   width: double.infinity,
                   height: 280,
@@ -403,48 +397,48 @@ class _PatientWebViewState extends State<PatientWebView> {
                   ),
                 ),
               ),
-              // Previous button
-              if (_currentPage > 0)
-                Positioned(
-                  left: 8,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _currentPage--),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1C2B3A).withOpacity(0.7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              // Next button
-              if (_currentPage < scanImages.length - 1)
-                Positioned(
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _currentPage++),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1C2B3A).withOpacity(0.7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_right,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
+              // // Previous button
+              // if (_currentPage > 0)
+              //   Positioned(
+              //     left: 8,
+              //     child: GestureDetector(
+              //       onTap: () => setState(() => _currentPage--),
+              //       child: Container(
+              //         width: 32,
+              //         height: 32,
+              //         decoration: BoxDecoration(
+              //           color: const Color(0xFF1C2B3A).withOpacity(0.7),
+              //           shape: BoxShape.circle,
+              //         ),
+              //         child: const Icon(
+              //           Icons.chevron_left,
+              //           color: Colors.white,
+              //           size: 20,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // // Next button
+              // if (_currentPage < scanImages.length - 1)
+              //   Positioned(
+              //     right: 8,
+              //     child: GestureDetector(
+              //       onTap: () => setState(() => _currentPage++),
+              //       child: Container(
+              //         width: 32,
+              //         height: 32,
+              //         decoration: BoxDecoration(
+              //           color: const Color(0xFF1C2B3A).withOpacity(0.7),
+              //           shape: BoxShape.circle,
+              //         ),
+              //         child: const Icon(
+              //           Icons.chevron_right,
+              //           color: Colors.white,
+              //           size: 20,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
             ],
           ),
         ),
@@ -497,7 +491,7 @@ class _PatientWebViewState extends State<PatientWebView> {
   }
 
   // Doctor card
-  Widget _buildDoctorCard(String doctorName) {
+  Widget _buildDoctorCard(String doctorName, String doctorInitials) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -516,9 +510,9 @@ class _PatientWebViewState extends State<PatientWebView> {
                 color: Color(0xFFCDD8E3),
                 shape: BoxShape.circle,
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  'JR',
+                  doctorInitials,
                   style: TextStyle(
                     color: Color(0xFF1C2B3A),
                     fontSize: 12,
