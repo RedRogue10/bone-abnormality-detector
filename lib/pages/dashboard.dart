@@ -239,8 +239,10 @@ class _DashboardPageState extends State<DashboardPage> {
                           if (snapshot.hasError) {
                             return Center(
                               child: Text(
-                                'Error loading recent scans',
-                                style: GoogleFonts.poppins(color: Colors.red),
+                                'No Recently Accessed Scans',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.blueGrey,
+                                ),
                               ),
                             );
                           }

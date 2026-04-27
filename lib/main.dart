@@ -23,28 +23,26 @@ import 'models/scan_result.dart';
 import 'url_strategy_noop.dart' if (dart.library.html) 'url_strategy_web.dart';
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/login',
 
   redirect: (context, state) {
     final loggedIn = FirebaseAuth.instance.currentUser != null;
     final path = state.uri.path;
     print("REDIRECTIONS: Target is ${state.uri.path}");
-
+    if (path == '/') return '/login';
     // 1. ALWAYS allow the public route first, no matter what
     if (path == '/view-results') {
       return null;
     }
 
-    // 2. Auth Logic for the Doctor App
-    final isLoggingIn = path == '/';
+    final isLoggingIn = path == '/login';
 
     if (!loggedIn && !isLoggingIn) {
       // Not logged in and trying to access dashboard? Go to login.
-      return '/';
+      return '/login';
     }
 
     if (loggedIn && isLoggingIn) {
-      // Already logged in? Skip the login page.
       return '/dashboard';
     }
 
@@ -52,8 +50,10 @@ final GoRouter _router = GoRouter(
   },
 
   routes: [
+    GoRoute(path: '/', redirect: (_, _) => '/login'),
+
     // Login
-    GoRoute(path: '/', builder: (context, state) => const LoginPage()),
+    GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
     // Dashboard
     GoRoute(
