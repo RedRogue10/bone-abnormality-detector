@@ -4,7 +4,6 @@ import 'edit_patient.dart';
 import '../services/database_service.dart';
 import '../models/patient.dart';
 import '../pages/xray_history.dart';
-import '../pages/info_screen.dart';
 import '../pages/camera_capture.dart';
 
 class PatientInfoScreen extends StatefulWidget {
@@ -70,28 +69,36 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
   }
 
   Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 120,
-          child: Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 150,
+            child: Text(
+              '$label:',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.3,
+                color: const Color(0xFF0B2545),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: GoogleFonts.poppins(fontSize: 16, letterSpacing: 0.5),
-            softWrap: true,
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                letterSpacing: 0.3,
+                color: const Color(0xFF1A1A2E),
+              ),
+              softWrap: true,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -146,89 +153,70 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Patient Information',
+          'PATIENT INFORMATION',
           style: GoogleFonts.oswald(
             color: white,
             fontSize: 20,
-            letterSpacing: 1.5,
           ),
         ),
         centerTitle: true,
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12),
-
-            child: IconButton(
-              icon: const Icon(
-                Icons.info_outline_rounded,
-                color: white,
-                size: 22,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => InfoScreen()),
-                );
-              },
-            ),
           ),
         ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(height: 24),
-                // Patient info card
-                ElevatedButton(
-                  onPressed: () {
-                    // Disabled
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF0B2545),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 4,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: primaryBlue,
-                        minRadius: 40.0,
-                        child: Text(
-                          _patient?.initials ?? '',
-                          style: TextStyle(
-                            color: white,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1,
-                          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: double.infinity,
+                color: darkNavy,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 28,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: primaryBlue,
+                      radius: 46,
+                      child: Text(
+                        _patient?.initials ?? '',
+                        style: const TextStyle(
+                          color: white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 28,
+                          letterSpacing: 1.5,
                         ),
                       ),
-                      SizedBox(width: 8),
-                      Column(
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Text(
-                                fullName,
-                                style: GoogleFonts.oswald(
-                                  fontSize: 16,
-                                  letterSpacing: 1,
+                              Flexible(
+                                child: Text(
+                                  fullName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 24,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  softWrap: true,
                                 ),
                               ),
-                              IconButton(
-                                onPressed: () {
+                              const SizedBox(width: 8),
+                              GestureDetector(
+                                onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -238,31 +226,33 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                                     ),
                                   ).then((_) => _loadPatient());
                                 },
-                                icon: const Icon(
-                                  Icons.edit_square,
-                                  size: 16,
-                                  color: primaryBlue,
+                                child: const Icon(
+                                  Icons.edit_outlined,
+                                  size: 18,
+                                  color: Color(0xFF7EB8F7),
                                 ),
                               ),
                             ],
                           ),
+                          const SizedBox(height: 6),
                           Text(
-                            '${_patient?.age ?? '-'}, ${_patient?.sex ?? '-'}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: primaryBlue,
+                            '${_patient?.age ?? '-'},  ${_patient?.sex ?? '-'}',
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Color(0xFF7EB8F7),
                               letterSpacing: 0.5,
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                Container(
+              ),
+              const SizedBox(height: 24),
+              Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
+                    horizontal: 24,
                     vertical: 12,
                   ),
 
@@ -274,33 +264,35 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                         child: Text(
                           'Personal Information',
                           style: GoogleFonts.inter(
-                            fontSize: 18,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                             color: primaryBlue,
-                            letterSpacing: 1,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Column(
-                          children: [
-                            _buildInfoRow('Name', fullName),
-                            _buildInfoRow('Age', age),
-                            _buildInfoRow('Sex', _patient?.sex ?? '-'),
-                            _buildInfoRow(
-                              'Birthdate',
-                              _patient != null
-                                  ? '${_patient!.birthDate.month}/${_patient!.birthDate.day}/${_patient!.birthDate.year}'
-                                  : '-',
-                            ),
-                            _buildInfoRow(
-                              'Contact Number',
-                              _patient?.contactNumber ?? '-',
-                            ),
-                            _buildInfoRow('Address', _patient?.address ?? '-'),
-                          ],
-                        ),
+                      Column(
+                        children: [
+                          _buildInfoRow('Name', fullName),
+                          _buildInfoRow('Age', age),
+                          _buildInfoRow('Sex', _patient?.sex ?? '-'),
+                          _buildInfoRow(
+                            'Birthdate',
+                            _patient != null
+                                ? '${_patient!.birthDate.month}/${_patient!.birthDate.day}/${_patient!.birthDate.year}'
+                                : '-',
+                          ),
+                          _buildInfoRow(
+                            'Contact Number',
+                            _patient?.contactNumber ?? '-',
+                          ),
+                          _buildInfoRow(
+                            'Email',
+                            _patient?.email ?? '-', 
+                          ),
+                          _buildInfoRow('Address', _patient?.address ?? '-'),
+                        ],
                       ),
                       const SizedBox(height: 16),
 
@@ -310,31 +302,29 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                         child: Text(
                           'Emergency Contact',
                           style: GoogleFonts.inter(
-                            fontSize: 18,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                             color: primaryBlue,
-                            letterSpacing: 1,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Column(
-                          children: [
-                            _buildInfoRow(
-                              'Name',
-                              _patient?.emergencyContact?.name ?? '-',
-                            ),
-                            _buildInfoRow(
-                              'Contact Number',
-                              _patient?.emergencyContact?.contactNumber ?? '-',
-                            ),
-                            _buildInfoRow(
-                              'Relationship',
-                              _patient?.emergencyContact?.relationship ?? '-',
-                            ),
-                          ],
-                        ),
+                      Column(
+                        children: [
+                          _buildInfoRow(
+                            'Name',
+                            _patient?.emergencyContact?.name ?? '-',
+                          ),
+                          _buildInfoRow(
+                            'Contact Number',
+                            _patient?.emergencyContact?.contactNumber ?? '-',
+                          ),
+                          _buildInfoRow(
+                            'Relationship',
+                            _patient?.emergencyContact?.relationship ?? '-',
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 32),
 
@@ -344,15 +334,16 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                         child: Text(
                           'Patient History',
                           style: GoogleFonts.inter(
-                            fontSize: 18,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                             color: primaryBlue,
-                            letterSpacing: 1,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
                       const SizedBox(height: 16),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: IntrinsicHeight(
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,8 +480,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                     ],
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
