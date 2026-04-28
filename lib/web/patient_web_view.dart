@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/web_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PatientWebView extends StatefulWidget {
   final String shortId;
@@ -29,6 +30,7 @@ class _PatientWebViewState extends State<PatientWebView> {
 
             // Error State (Expired link, wrong token, or permission denied)
             if (snapshot.hasError || !snapshot.hasData) {
+              print(snapshot.error);
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -75,7 +77,15 @@ class _PatientWebViewState extends State<PatientWebView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Patient + Scan Date
-                            _buildMetaRow(),
+                            _buildMetaRow(
+                              data['patientName'],
+                              data['patientId'],
+                              (data['createdAt'] as Timestamp)
+                                  .toDate()
+                                  .toString()
+                                  .split(' ')[0],
+                              data['scanId'],
+                            ),
 
                             const Divider(height: 1, color: Color(0xFFE5E5E5)),
 
@@ -83,11 +93,8 @@ class _PatientWebViewState extends State<PatientWebView> {
                             _buildSectionLabel('X-RAY SCAN RESULT'),
 
                             // X-Ray Image
-                            // Sample assets for UI testing — TODO: replace with backend data
                             _buildImageCarousel([
-                              {'asset': 'assets/images/xray.png',    'label': 'X-Ray'},
-                              {'asset': 'assets/images/gradcam.png', 'label': 'Grad-CAM Result'},
-                              {'asset': 'assets/images/heatmap.png', 'label': 'Heatmap Overlay'},
+                              {'asset': data['imageUrl'], 'label': 'X-Ray'},
                             ]),
 
                             const SizedBox(height: 20),
@@ -103,16 +110,18 @@ class _PatientWebViewState extends State<PatientWebView> {
                             const SizedBox(height: 12),
 
                             // Doctor card
-                            _buildDoctorCard(),
+                            _buildDoctorCard(
+                              data['doctorFullName'],
+                              data['doctorInitials'],
+                            ),
 
                             const SizedBox(height: 4),
 
                             // Expiry row (from backend: data['shareExpiresAt'])
                             _buildExpiryRow(
-                              data['shareExpiresAt']
-                                  .toDate()
-                                  .toString()
-                                  .split(' ')[0],
+                              data['shareExpiresAt'].toDate().toString().split(
+                                ' ',
+                              )[0],
                             ),
 
                             const SizedBox(height: 16),
@@ -189,51 +198,52 @@ class _PatientWebViewState extends State<PatientWebView> {
             ),
           ),
           // Save as PDF button
-          // TODO: implement PDF save on tap
-          GestureDetector(
-            onTap: () {},
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 8,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.25),
-                  width: 1,
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.picture_as_pdf_outlined,
-                    size: 15,
-                    color: Colors.white,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Save as PDF',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          // GestureDetector(
+          //   onTap: () {},
+          //   child: Container(
+          //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          //     decoration: BoxDecoration(
+          //       color: Colors.white.withOpacity(0.1),
+          //       border: Border.all(
+          //         color: Colors.white.withOpacity(0.25),
+          //         width: 1,
+          //       ),
+          //       borderRadius: BorderRadius.circular(6),
+          //     ),
+          //     child: const Row(
+          //       mainAxisSize: MainAxisSize.min,
+          //       children: [
+          //         Icon(
+          //           Icons.picture_as_pdf_outlined,
+          //           size: 15,
+          //           color: Colors.white,
+          //         ),
+          //         SizedBox(width: 6),
+          //         Text(
+          //           'Save as PDF',
+          //           style: TextStyle(
+          //             fontSize: 12,
+          //             fontWeight: FontWeight.w500,
+          //             color: Colors.white,
+          //             letterSpacing: 0.2,
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
   }
 
   // Patient + Scan Date
-  Widget _buildMetaRow() {
+  Widget _buildMetaRow(
+    String patientName,
+    String patientId,
+    String createdAt,
+    String scanId,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
@@ -242,11 +252,11 @@ class _PatientWebViewState extends State<PatientWebView> {
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               _MetaLabel(text: 'PATIENT'),
               SizedBox(height: 3),
               Text(
-                'Juan Dela Cruz',
+                patientName,
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -256,7 +266,7 @@ class _PatientWebViewState extends State<PatientWebView> {
               _MetaLabel(text: 'PATIENT ID'),
               SizedBox(height: 3),
               Text(
-                'PT-0000-00000',
+                patientId,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -267,11 +277,11 @@ class _PatientWebViewState extends State<PatientWebView> {
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
-            children: const [
+            children: [
               _MetaLabel(text: 'SCAN DATE'),
               SizedBox(height: 3),
               Text(
-                'January 1, 2026',
+                createdAt,
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -281,7 +291,7 @@ class _PatientWebViewState extends State<PatientWebView> {
               _MetaLabel(text: 'SCAN ID'),
               SizedBox(height: 3),
               Text(
-                'SC-0000-00000',
+                scanId,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -352,16 +362,13 @@ class _PatientWebViewState extends State<PatientWebView> {
               ),
               Text(
                 '${_currentPage + 1} / ${scanImages.length}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF9E9E94),
-                ),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF9E9E94)),
               ),
             ],
           ),
         ),
 
-        // swipeable image 
+        // swipeable image
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Stack(
@@ -369,7 +376,7 @@ class _PatientWebViewState extends State<PatientWebView> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: Image.asset(
+                child: Image.network(
                   scanImages[_currentPage]['asset'] ?? '',
                   width: double.infinity,
                   height: 280,
@@ -390,48 +397,48 @@ class _PatientWebViewState extends State<PatientWebView> {
                   ),
                 ),
               ),
-              // Previous button
-              if (_currentPage > 0)
-                Positioned(
-                  left: 8,
-                  child: GestureDetector(
-                    onTap: () => setState(() => _currentPage--),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1C2B3A).withOpacity(0.7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-              // Next button
-              if (_currentPage < scanImages.length - 1)
-                Positioned(
-                  right: 8,
-                  child: GestureDetector( 
-                    onTap: () => setState(() => _currentPage++),
-                    child: Container( 
-                      width: 32, 
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1C2B3A).withOpacity(0.7), 
-                        shape: BoxShape.circle, 
-                      ),
-                      child: const Icon(
-                        Icons.chevron_right, 
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
+              // // Previous button
+              // if (_currentPage > 0)
+              //   Positioned(
+              //     left: 8,
+              //     child: GestureDetector(
+              //       onTap: () => setState(() => _currentPage--),
+              //       child: Container(
+              //         width: 32,
+              //         height: 32,
+              //         decoration: BoxDecoration(
+              //           color: const Color(0xFF1C2B3A).withOpacity(0.7),
+              //           shape: BoxShape.circle,
+              //         ),
+              //         child: const Icon(
+              //           Icons.chevron_left,
+              //           color: Colors.white,
+              //           size: 20,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
+              // // Next button
+              // if (_currentPage < scanImages.length - 1)
+              //   Positioned(
+              //     right: 8,
+              //     child: GestureDetector(
+              //       onTap: () => setState(() => _currentPage++),
+              //       child: Container(
+              //         width: 32,
+              //         height: 32,
+              //         decoration: BoxDecoration(
+              //           color: const Color(0xFF1C2B3A).withOpacity(0.7),
+              //           shape: BoxShape.circle,
+              //         ),
+              //         child: const Icon(
+              //           Icons.chevron_right,
+              //           color: Colors.white,
+              //           size: 20,
+              //         ),
+              //       ),
+              //     ),
+              //   ),
             ],
           ),
         ),
@@ -484,7 +491,7 @@ class _PatientWebViewState extends State<PatientWebView> {
   }
 
   // Doctor card
-  Widget _buildDoctorCard() {
+  Widget _buildDoctorCard(String doctorName, String doctorInitials) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -503,9 +510,9 @@ class _PatientWebViewState extends State<PatientWebView> {
                 color: Color(0xFFCDD8E3),
                 shape: BoxShape.circle,
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  'JR',
+                  doctorInitials,
                   style: TextStyle(
                     color: Color(0xFF1C2B3A),
                     fontSize: 12,
@@ -518,9 +525,9 @@ class _PatientWebViewState extends State<PatientWebView> {
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Text(
-                  'Dr. Jose Reyes',
+                  'Dr. $doctorName',
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w600,
@@ -577,11 +584,7 @@ class _PatientWebViewState extends State<PatientWebView> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: const [
-            Icon(
-              Icons.verified_user,
-              size: 16,
-              color: Color(0xFF2E7D32),
-            ),
+            Icon(Icons.verified_user, size: 16, color: Color(0xFF2E7D32)),
             SizedBox(width: 8),
             Text(
               'Verified & Secured by Bone X-Ray Reader',

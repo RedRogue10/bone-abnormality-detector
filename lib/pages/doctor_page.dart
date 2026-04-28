@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'edit_doctor_info.dart';
 import '../services/database_service.dart';
 import 'package:bone_abnormality_detector/services/auth.dart';
+import 'package:go_router/go_router.dart';
 
 class DoctorPage extends StatefulWidget {
   final String userId;
@@ -14,7 +15,7 @@ class DoctorPage extends StatefulWidget {
 }
 
 class _DoctorPageState extends State<DoctorPage> {
-  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
 
   UserModel? user;
@@ -43,15 +44,13 @@ class _DoctorPageState extends State<DoctorPage> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final firstName = user?.firstName ?? '';
-    final lastName  = user?.lastName  ?? '';
-    final fullName  = user?.fullName  ?? '';
-    final email     = user?.email     ?? '';
+    final lastName = user?.lastName ?? '';
+    final fullName = user?.fullName ?? '';
+    final email = user?.email ?? '';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -67,12 +66,17 @@ class _DoctorPageState extends State<DoctorPage> {
                   // Top bar
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 8),
+                      horizontal: 8,
+                      vertical: 8,
+                    ),
                     child: Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.chevron_left,
-                              color: Colors.white, size: 28),
+                          icon: const Icon(
+                            Icons.chevron_left,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                           onPressed: () => Navigator.pop(context),
                         ),
                         Expanded(
@@ -105,8 +109,11 @@ class _DoctorPageState extends State<DoctorPage> {
                           'assets/images/doctor_icon.png',
                           fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.person,
-                                  size: 52, color: Colors.white),
+                              const Icon(
+                                Icons.person,
+                                size: 52,
+                                color: Colors.white,
+                              ),
                         ),
                       ),
                       Column(
@@ -149,7 +156,8 @@ class _DoctorPageState extends State<DoctorPage> {
                                     if (!context.mounted) return;
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                          content: Text('Profile updated')),
+                                        content: Text('Profile updated'),
+                                      ),
                                     );
                                   }
                                 },
@@ -191,21 +199,23 @@ class _DoctorPageState extends State<DoctorPage> {
                     onPressed: () async {
                       await Auth().signOut();
                       if (!context.mounted) return;
-                      Navigator.of(context)
-                          .popUntil((route) => route.isFirst);
+                      context.go('/login');
                     },
                     icon: const Icon(Icons.logout, size: 17),
                     label: const Text(
                       'Sign Out',
                       style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w600),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black87,
                       foregroundColor: Colors.white,
                       minimumSize: const Size(160, 46),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30)),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
                       elevation: 2,
                     ),
                   ),
