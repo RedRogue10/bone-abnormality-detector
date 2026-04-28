@@ -150,7 +150,7 @@ class _AllScansPageState extends State<AllScansPage> {
               Expanded(
                 child: Center(
                   child: Text(
-                    'All Scans',
+                    'ALL SCANS',
                     style: GoogleFonts.oswald(color: white, fontSize: 20),
                   ),
                 ),

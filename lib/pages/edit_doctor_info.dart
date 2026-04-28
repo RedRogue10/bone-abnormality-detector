@@ -16,13 +16,11 @@ class EditDoctorInfoPage extends StatefulWidget {
 }
 
 class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
-  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color fieldFill   = Color(0xFFEEF0F2);
-  static const Color fieldBorder = Color(0xFFCDD1D6);
 
   final _firstNameCtrl = TextEditingController();
-  final _lastNameCtrl  = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
   bool isLoading = true;
 
   @override
@@ -42,7 +40,7 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
     await Auth().syncEmailIfChanged();
     final user = await DatabaseService().getUserData();
     _firstNameCtrl.text = user.firstName;
-    _lastNameCtrl.text  = user.lastName;
+    _lastNameCtrl.text = user.lastName;
     setState(() => isLoading = false);
   }
 
@@ -53,7 +51,7 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
         .doc(user.uid)
         .update({
       'firstName': _firstNameCtrl.text.trim(),
-      'lastName':  _lastNameCtrl.text.trim(),
+      'lastName': _lastNameCtrl.text.trim(),
       'updatedAt': Timestamp.now(),
     });
     if (!context.mounted) return;
@@ -62,8 +60,8 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = _firstNameCtrl.text;
-    final lastName  = _lastNameCtrl.text;
+    final fullName =
+        '${_firstNameCtrl.text} ${_lastNameCtrl.text}'.trim();
 
     if (isLoading) {
       return const Scaffold(
@@ -126,98 +124,119 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
-
-                    // Avatar + stacked name (no edit icon)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 110,
-                          height: 110,
-                          child: Image.asset(
-                            'assets/images/doctor_icon.png',
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
-                                Icons.person,
-                                size: 52,
-                                color: Colors.white),
+                    // Doctor icon + name + Radiologist (matches DoctorPage)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 28),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 92,
+                            height: 92,
+                            child: Image.asset(
+                              'assets/images/doctor_icon.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.person,
+                                  size: 52,
+                                  color: Colors.white),
+                            ),
                           ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              firstName,
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                height: 1.15,
-                              ),
+                          const SizedBox(width: 20),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  fullName.isEmpty ? 'Doctor' : fullName,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 24,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  softWrap: true,
+                                ),
+                                const SizedBox(height: 6),
+                                const Text(
+                                  'Radiologist',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Color(0xFF7EB8F7),
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              lastName,
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                height: 1.15,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
-
-                    const SizedBox(height: 28),
                   ],
                 ),
               ),
             ),
 
-            const SizedBox(height: 28),
+            const SizedBox(height: 32),
 
-            // ── FORM + ACCOUNT OPTIONS ──
+            // FORM
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _fieldLabel('First name'),
-                  _inputField(_firstNameCtrl),
-                  const SizedBox(height: 16),
-
-                  _fieldLabel('Last name'),
-                  _inputField(_lastNameCtrl),
-                  const SizedBox(height: 28),
-
-                  // Account Options label
+                  // Section label
                   Text(
-                    'Account Options:',
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                    'Personal Information',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: primaryBlue,
+                      letterSpacing: 0.5,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 4),
+                  const Divider(color: Color(0xFFE0E0E0)),
+                  const SizedBox(height: 20),
 
-                  // Change Email button
+                  _fieldLabel('First Name'),
+                  _inputField(_firstNameCtrl),
+                  const SizedBox(height: 20),
+
+                  _fieldLabel('Last Name'),
+                  _inputField(_lastNameCtrl),
+                  const SizedBox(height: 36),
+
+                  // Account Options
+                  Text(
+                    'Account Options',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: primaryBlue,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Divider(color: Color(0xFFE0E0E0)),
+                  const SizedBox(height: 16),
+
                   _accountButton(
-                    label: 'Change email',
+                    icon: Icons.email_outlined,
+                    label: 'Change Email',
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
                           builder: (_) => const ChangeEmailPage()),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
 
-                  // Change Password button
                   _accountButton(
-                    label: 'Change password',
+                    icon: Icons.lock_outline,
+                    label: 'Change Password',
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -237,13 +256,13 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
 
   Widget _fieldLabel(String label) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 13.5,
+        style: GoogleFonts.poppins(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
           color: Colors.black87,
-          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -254,64 +273,65 @@ class _EditDoctorInfoPageState extends State<EditDoctorInfoPage> {
     bool obscure = false,
     TextInputType keyboardType = TextInputType.text,
   }) {
-    return SizedBox(
-      height: 46,
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        keyboardType: keyboardType,
-        onChanged: (_) => setState(() {}),
-        style: const TextStyle(fontSize: 14, color: Colors.black87),
-        decoration: InputDecoration(
-          filled: true,
-          fillColor: fieldFill,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: fieldBorder, width: 1.2),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide: const BorderSide(color: fieldBorder, width: 1.2),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(6),
-            borderSide:
-                const BorderSide(color: Color(0xFF1A73E9), width: 1.5),
-          ),
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      onChanged: (_) => setState(() {}),
+      style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFCDD1D6), width: 1.2),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFCDD1D6), width: 1.2),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: primaryBlue, width: 1.8),
         ),
       ),
     );
   }
 
   Widget _accountButton({
+    required IconData icon,
     required String label,
     required VoidCallback onTap,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0A1128),
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFE0E0E0), width: 1.2),
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.white,
         ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: darkNavy),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black87,
+                ),
+              ),
             ),
-          ),
+            const Icon(Icons.chevron_right,
+                size: 20, color: Color(0xFFAAAAAA)),
+          ],
         ),
       ),
     );

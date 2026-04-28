@@ -531,13 +531,6 @@ class _DashboardPageState extends State<DashboardPage> {
                   shape: BoxShape.circle,
                   color: cameraRing,
                   border: Border.all(color: cameraRing, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: cameraRing.withOpacity(0.45),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
                 ),
                 child: const Icon(
                   Icons.camera_alt,

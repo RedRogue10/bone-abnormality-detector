@@ -48,8 +48,6 @@ class _DoctorPageState extends State<DoctorPage> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final firstName = user?.firstName ?? '';
-    final lastName = user?.lastName ?? '';
     final fullName = user?.fullName ?? '';
     final email = user?.email ?? '';
 
@@ -96,86 +94,96 @@ class _DoctorPageState extends State<DoctorPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
-
                   // Avatar + name + edit icon
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 110,
-                        height: 110,
-                        child: Image.asset(
-                          'assets/images/doctor_icon.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.person,
-                                size: 52,
-                                color: Colors.white,
-                              ),
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            firstName,
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              height: 1.15,
-                            ),
-                          ),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Text(
-                                lastName,
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 28,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 92,
+                          height: 85,
+                          child: Image.asset(
+                            'assets/images/doctor_icon.png',
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.person,
+                                  size: 52,
                                   color: Colors.white,
-                                  height: 1.15,
                                 ),
-                              ),
-                              const SizedBox(width: 15),
-                              GestureDetector(
-                                onTap: () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => EditDoctorInfoPage(
-                                        userId: widget.userId,
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      fullName,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 24,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
                                       ),
+                                      softWrap: true,
                                     ),
-                                  );
-                                  if (result == true) {
-                                    _loadUser();
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Profile updated'),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: const Icon(
-                                  Icons.edit_outlined,
-                                  color: primaryBlue,
-                                  size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => EditDoctorInfoPage(
+                                            userId: widget.userId,
+                                          ),
+                                        ),
+                                      );
+                                      if (result == true) {
+                                        _loadUser();
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Profile updated'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                      color: Color(0xFF7EB8F7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Radiologist',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Color(0xFF7EB8F7),
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-
-                  const SizedBox(height: 28),
                 ],
               ),
             ),
@@ -183,7 +191,7 @@ class _DoctorPageState extends State<DoctorPage> {
 
           const SizedBox(height: 24),
 
-          // ── INFO ROWS ──
+          // INFO ROWS
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
