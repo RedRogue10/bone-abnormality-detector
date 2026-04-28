@@ -10,7 +10,6 @@ import 'package:go_router/go_router.dart';
 import 'pages/dashboard.dart';
 import 'pages/camera_capture.dart';
 import 'pages/splash_screen.dart';
-import 'pages/reset_password.dart';
 import 'pages/login.dart';
 import 'web/patient_web_view.dart';
 
@@ -24,28 +23,26 @@ import 'models/scan_result.dart';
 import 'url_strategy_noop.dart' if (dart.library.html) 'url_strategy_web.dart';
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/login',
 
   redirect: (context, state) {
     final loggedIn = FirebaseAuth.instance.currentUser != null;
     final path = state.uri.path;
     print("REDIRECTIONS: Target is ${state.uri.path}");
-
+    if (path == '/') return '/login';
     // 1. ALWAYS allow the public route first, no matter what
     if (path == '/view-results') {
       return null;
     }
 
-    // 2. Auth Logic for the Doctor App
-    final isLoggingIn = path == '/';
+    final isLoggingIn = path == '/login';
 
     if (!loggedIn && !isLoggingIn) {
       // Not logged in and trying to access dashboard? Go to login.
-      return '/';
+      return '/login';
     }
 
     if (loggedIn && isLoggingIn) {
-      // Already logged in? Skip the login page.
       return '/dashboard';
     }
 
@@ -53,8 +50,10 @@ final GoRouter _router = GoRouter(
   },
 
   routes: [
+    GoRoute(path: '/', redirect: (_, _) => '/login'),
+
     // Login
-    GoRoute(path: '/', builder: (context, state) => const LoginPage()),
+    GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
 
     // Dashboard
     GoRoute(
@@ -249,8 +248,7 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 16),
               // Results Page button
               ElevatedButton(
-                onPressed: () {
-                },
+                onPressed: () {},
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF0B2545),
                   foregroundColor: Colors.white,
@@ -278,7 +276,7 @@ class HomePage extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const CameraCapturePage(patientId: '1',),
+                      builder: (_) => const CameraCapturePage(patientId: '1'),
                     ),
                   );
                 },
@@ -431,46 +429,12 @@ class HomePage extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ResetPasswordPage(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Go to Reset Password',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
               ElevatedButton(
                 onPressed: () async {
                   final sharingService = SharingService();
 
                   // Generate the link
                   String secureLink = await sharingService.generateSecureLink(
-                    doctorId: 'Lh2WuYR8UjUAOWOUXRh20mfAFLJ2',
                     patientId: 'FmnTTC426eN34O1mhSta',
                     scanId: 'i1tyaiyv904tPBj6DS1R',
                   );

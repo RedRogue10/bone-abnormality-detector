@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class XrayScan {
   final String id;
+  final String patientName;
   final String imageUrl;
   final DateTime createdAt;
   final String analysisStatus; //"pending", "processing", "completed", "failed"
@@ -10,6 +11,7 @@ class XrayScan {
 
   XrayScan({
     required this.id,
+    required this.patientName,
     required this.imageUrl,
     required this.createdAt,
     required this.analysisStatus,
@@ -18,6 +20,7 @@ class XrayScan {
 
   Map<String, dynamic> toMap() {
     return {
+      'patientName': patientName,
       'imageUrl': imageUrl,
       'createdAt': createdAt,
       'analysisStatus': analysisStatus,
@@ -33,6 +36,7 @@ class XrayScan {
   }) {
     return XrayScan(
       id: id,
+      patientName: map['patientName'],
       imageUrl: map['imageUrl'],
       createdAt: (map['createdAt'] as Timestamp).toDate(),
       analysisStatus: map['analysisStatus'],

@@ -27,14 +27,14 @@ class WebService {
     );
   }
 
-  // Fetch actual data using hidden ids
   Future<Map<String, dynamic>?> _internalFetch({
     required String doctorId,
     required String patientId,
     required String scanId,
     required String token,
   }) async {
-    final doc = await _firestore
+    // 1. Fetch scan
+    final scanDoc = await _firestore
         .collection('users')
         .doc(doctorId)
         .collection('patients')
@@ -43,14 +43,34 @@ class WebService {
         .doc(scanId)
         .get();
 
-    if (!doc.exists) throw Exception("Record not found.");
+    if (!scanDoc.exists) throw Exception("Record not found.");
 
-    final data = doc.data() as Map<String, dynamic>;
+    final scanData = scanDoc.data() as Map<String, dynamic>;
 
-    if (data['shareToken'] != token) {
+    // Token validation
+    if (scanData['shareToken'] != token) {
       throw Exception("Security token mismatch.");
     }
 
-    return data;
+    // Fetch doctor profile
+    final doctorDoc = await _firestore.collection('users').doc(doctorId).get();
+
+    final doctorData = doctorDoc.exists ? (doctorDoc.data() ?? {}) : {};
+    final first = (doctorData['firstName'] ?? '').toString();
+    final last = (doctorData['lastName'] ?? '').toString();
+    final fullName = "$first $last".trim();
+    final initials =
+        "${first.isNotEmpty ? first[0] : ''}${last.isNotEmpty ? last[0] : ''}"
+            .toUpperCase();
+    // Merge everything + add doctorId/patientId/scanId
+    return {
+      'doctorId': doctorId,
+      'doctorFullName': fullName,
+      'doctorInitials': initials,
+      'patientId': patientId,
+      'scanId': scanId,
+
+      ...scanData,
+    };
   }
 }

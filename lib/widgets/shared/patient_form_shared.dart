@@ -65,7 +65,7 @@ Widget buildField({
           child: Text(
             label,
             style: GoogleFonts.poppins(
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
               color: Colors.black87,
             ),
@@ -239,7 +239,7 @@ Widget buildHistorySection({
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
           ),
           child: Text(
             'Add Record',
@@ -278,15 +278,15 @@ AppBar buildAppBar({
           style: ElevatedButton.styleFrom(
             backgroundColor: _primaryBlue,
             foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(18),
             ),
             elevation: 0,
           ),
           child: Text(
             actionLabel,
-            style: GoogleFonts.inter(fontSize: 14, letterSpacing: 1),
+            style: GoogleFonts.inter(fontSize: 12, letterSpacing: 1),
           ),
         ),
       ),

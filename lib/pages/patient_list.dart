@@ -1,4 +1,3 @@
-// import 'package:bone_abnormality_detector/pages/patient_info.dart';
 import 'package:bone_abnormality_detector/pages/patient_info.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -70,7 +69,6 @@ class _PatientListPageState extends State<PatientListPage> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Dismiss dropdown when tapping elsewhere
       onTap: () {
         if (_showSortDropdown) {
           setState(() => _showSortDropdown = false);
@@ -87,42 +85,31 @@ class _PatientListPageState extends State<PatientListPage> {
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
-            'Patient List',
+            'PATIENT LIST',
             style: GoogleFonts.oswald(
               color: white,
               fontSize: 20,
-              letterSpacing: 1,
             ),
           ),
           centerTitle: true,
-          actions: [
-            Container(
-              width: 35,
-              height: 35,
-              margin: const EdgeInsets.only(right: 12),
-              decoration: const BoxDecoration(
-                color: primaryBlue,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.add, color: white, size: 20),
-                constraints: const BoxConstraints(),
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AddPatientPage()),
-                  );
-                  if (result == true) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Patient successfully added"),
-                      ),
-                    );
-                  }
-                },
-              ),
-            ),
-          ],
+        
+        ),
+
+        floatingActionButton: FloatingActionButton(
+          onPressed: () async {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AddPatientPage()),
+            );
+            if (result == true) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Patient successfully added")),
+              );
+            }
+          },
+          backgroundColor: primaryBlue,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, color: white, size: 26),
         ),
 
         // Body
@@ -181,11 +168,31 @@ class _PatientListPageState extends State<PatientListPage> {
                         }
 
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const Center(child: Text("No patients found"));
+                          return Center(
+                            child: Text(
+                              "No patients found",
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: grey,
+                              ),
+                            ),
+                          );
                         }
 
                         final patients = snapshot.data!;
                         final filtered = _applyFilters(patients);
+
+                        if (filtered.isEmpty) {
+                          return Center(
+                            child: Text(
+                              "No patient found",
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: grey,
+                              ),
+                            ),
+                          );
+                        }
 
                         return ListView.separated(
                           itemCount: filtered.length,
@@ -280,7 +287,7 @@ class _PatientListPageState extends State<PatientListPage> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${patient.age} years, ${patient.gender}',
+                    '${patient.age}, ${patient.gender}',
                     style: GoogleFonts.poppins(
                       color: primaryBlue,
                       fontSize: 12,
@@ -328,7 +335,7 @@ class _PatientListPageState extends State<PatientListPage> {
             CircleAvatar(
               radius: 22,
               backgroundColor:
-                  primaryBlue, // You can customize color based on patient
+                  primaryBlue, 
               child: Text(
                 patient.initials,
                 style: GoogleFonts.poppins(
@@ -353,7 +360,7 @@ class _PatientListPageState extends State<PatientListPage> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${patient.age} years, ${patient.gender}',
+                    '${patient.age}, ${patient.gender}',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: primaryBlue,
@@ -366,7 +373,7 @@ class _PatientListPageState extends State<PatientListPage> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  'Today', // You can calculate date added
+                  'Today', 
                   style: GoogleFonts.poppins(color: grey, fontSize: 11),
                 ),
                 const SizedBox(height: 6),

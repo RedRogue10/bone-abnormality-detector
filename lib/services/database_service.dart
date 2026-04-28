@@ -120,12 +120,27 @@ class DatabaseService {
 
   // ------------------- XRAY SCAN helping methods ----------------------
   Future<String> createXrayScan({required String patientId}) async {
+    final patientDoc = await _getPatientCollectionRef.doc(patientId);
+
+    final patientSnapshot = await patientDoc.get();
+
+    String patientFullName = "Unknown Patient";
+
+    if (patientSnapshot.exists) {
+      final patientData = patientSnapshot.data();
+
+      if (patientData != null) {
+        patientFullName = patientData.fullName;
+      }
+    }
+
     final scanRef = _getPatientCollectionRef
         .doc(patientId)
         .collection('scans')
         .doc();
 
     await scanRef.set({
+      'patientName': patientFullName,
       'imageUrl': '',
       'createdAt': Timestamp.now(),
       'analysisStatus': 'pending',
@@ -324,6 +339,82 @@ class DatabaseService {
         .collection('scans')
         .snapshots()
         .map((s) => s.docs.length);
+  }
+
+  // -------------------- RETRIEVE SCANS ----------------------------
+  Future<void> logRecentScanView({
+    required String scanId,
+    required String patientId,
+    required String patientName,
+    required String imageUrl,
+    required DateTime scanDate,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+
+    await _firestore
+        .collection(DOCTOR_COLLECTION_REF)
+        .doc(user.uid)
+        .collection('recent_views')
+        .doc(scanId)
+        .set({
+          'scanId': scanId,
+          'patientId': patientId,
+          'patientName': patientName,
+          'imageUrl': imageUrl,
+          'scanDate': Timestamp.fromDate(scanDate),
+          'lastAccessed': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+  }
+
+  Stream<QuerySnapshot> getRecentlyAccessedScansStream() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+    return FirebaseFirestore.instance
+        .collection(DOCTOR_COLLECTION_REF)
+        .doc(user.uid)
+        .collection('recent_views')
+        .orderBy('lastAccessed', descending: true)
+        .limit(10)
+        .snapshots();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchAllScans() async {
+    List<Map<String, dynamic>> allDoctorScans = [];
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('No user logged in');
+    }
+
+    final patientsSnap = await _firestore
+        .collection('users')
+        .doc(user.uid)
+        .collection('patients')
+        .get();
+
+    for (var patientDoc in patientsSnap.docs) {
+      final patientId = patientDoc.id;
+      final scansSnap = await patientDoc.reference.collection('scans').get();
+
+      for (var scanDoc in scansSnap.docs) {
+        final scanId = scanDoc.id;
+        final data = scanDoc.data();
+        allDoctorScans.add({
+          'name': data['patientName'] ?? 'Unknown Patient',
+          'date': (data['createdAt'] as Timestamp).toDate(),
+          'imageUrl': data['imageUrl'],
+          'patientId': patientId,
+          'scanId': scanId,
+        });
+      }
+    }
+    allDoctorScans.sort((a, b) => b['date'].compareTo(a['date']));
+    return allDoctorScans;
   }
 
   // -------------------- FULL PIEPLINES TO CALL ----------------------

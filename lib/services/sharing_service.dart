@@ -32,10 +32,10 @@ class SharingService {
   }
 
   Future<String> generateSecureLink({
-    required String doctorId,
     required String patientId,
     required String scanId,
   }) async {
+    final user = FirebaseAuth.instance.currentUser;
     final doc = await _getPatientCollectionRef
         .doc(patientId)
         .collection('scans')
@@ -60,10 +60,7 @@ class SharingService {
 
     // ------------------ Save Shared token to both Scan and Shared Link collection --------------
     // Save to Scan docs
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(doctorId)
-        .collection('patients')
+    await _getPatientCollectionRef
         .doc(patientId)
         .collection('scans')
         .doc(scanId)
@@ -74,7 +71,7 @@ class SharingService {
         .collection('shared_links')
         .doc(shortId)
         .set({
-          'docId': doctorId,
+          'docId': user!.uid,
           'pid': patientId,
           'scanId': scanId,
           'token': token,

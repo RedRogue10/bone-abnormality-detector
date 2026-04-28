@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
+import 'package:flutter/foundation.dart'
+    show consolidateHttpClientResponseBytes;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show consolidateHttpClientResponseBytes;
 import 'package:flutter/material.dart';
@@ -12,8 +14,8 @@ import 'package:intl/intl.dart';
 import '../models/scan_result.dart';
 import '../models/xray_scan.dart';
 import '../services/database_service.dart';
-import '../services/email_service.dart';
 import '../services/sharing_service.dart';
+import '../services/email_service.dart';
 
 class XrayResultPage extends StatefulWidget {
   final String patientId;
@@ -30,14 +32,15 @@ class XrayResultPage extends StatefulWidget {
 }
 
 class _XrayResultPageState extends State<XrayResultPage> {
-  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color white       = Colors.white;
+  static const Color white = Colors.white;
 
-  final DatabaseService       _db                 = DatabaseService();
+  final DatabaseService _db = DatabaseService();
+  final SharingService _ss = SharingService();
   final TextEditingController _interpretationCtrl = TextEditingController();
 
-  XrayScan?   _scan;
+  XrayScan? _scan;
   ScanResult? _result;
   Uint8List?  _camImageBytes;
   String?     _errorMessage;
@@ -84,7 +87,98 @@ class _XrayResultPageState extends State<XrayResultPage> {
         _interpretationCtrl.text = scan.result?.interpretation ?? '';
       }
     } catch (e) {
-      if (mounted) setState(() { _errorMessage = e.toString(); _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showShareOptions() async {
+    final patientDoc = await _db.getPatientById(widget.patientId);
+    final patientEmail = patientDoc.email;
+    print(patientEmail);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        final hasEmail = patientEmail != null && patientEmail.trim().isNotEmpty;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // SEND TO EMAIL OPTION
+              ListTile(
+                enabled: hasEmail,
+                leading: Icon(
+                  Icons.email_outlined,
+                  color: hasEmail ? Colors.black87 : Colors.grey,
+                ),
+                title: Text(
+                  hasEmail
+                      ? 'Send to patient email'
+                      : 'No email available for this patient',
+                  style: TextStyle(
+                    color: hasEmail ? Colors.black87 : Colors.grey,
+                  ),
+                ),
+                onTap: hasEmail
+                    ? () {
+                        Navigator.pop(context);
+                        _sendEmailToPatient(patientEmail);
+                      }
+                    : null,
+              ),
+
+              // COPY LINK OPTION
+              ListTile(
+                leading: const Icon(Icons.link),
+                title: const Text('Copy link to clipboard'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _copyPublicLink();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _copyPublicLink() async {
+    final link = await _ss.generateSecureLink(
+      patientId: widget.patientId,
+      scanId: widget.scanId,
+    );
+    await Clipboard.setData(ClipboardData(text: link));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+  }
+
+  void _sendEmailToPatient(String email) async {
+    try {
+      final link = await _ss.generateSecureLink(
+        patientId: widget.patientId,
+        scanId: widget.scanId,
+      );
+      await EmailService().sendEmailLink(email, link);
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Email sent to $email')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to send email: $e')));
     }
   }
 
@@ -298,7 +392,8 @@ class _XrayResultPageState extends State<XrayResultPage> {
                 BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                   child: ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.55)),
+                    color: Colors.black.withValues(alpha: 0.55),
+                  ),
                 ),
                 Center(
                   child: GestureDetector(
@@ -340,8 +435,10 @@ class _XrayResultPageState extends State<XrayResultPage> {
         children: [
           Icon(Icons.layers_outlined, color: Colors.white38, size: 64),
           SizedBox(height: 12),
-          Text('CAM overlay not available',
-              style: TextStyle(color: Colors.white38, fontSize: 13)),
+          Text(
+            'CAM overlay not available',
+            style: TextStyle(color: Colors.white38, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -360,8 +457,11 @@ class _XrayResultPageState extends State<XrayResultPage> {
       loadingBuilder: (context, child, progress) => progress == null
           ? child
           : const Center(child: CircularProgressIndicator(color: Colors.white)),
-      errorBuilder: (context, error, stack) =>
-          const Icon(Icons.broken_image_outlined, color: Colors.white38, size: 64),
+      errorBuilder: (context, error, stack) => const Icon(
+        Icons.broken_image_outlined,
+        color: Colors.white38,
+        size: 64,
+      ),
     );
   }
 
@@ -370,14 +470,19 @@ class _XrayResultPageState extends State<XrayResultPage> {
       children: [
         SizedBox(
           width: 110,
-          child: Text(label,
-              style: GoogleFonts.poppins(
-                  color: primaryBlue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14)),
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              color: primaryBlue,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
         ),
-        Text(confidence,
-            style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87)),
+        Text(
+          confidence,
+          style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+        ),
       ],
     );
   }
@@ -385,36 +490,47 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Widget _buildTextResult() {
     final result = _result!;
     final isAbnormal = result.hasAbnormality;
-    final label = isAbnormal ? 'ABNORMALITY DETECTED' : 'NO ABNORMALITY DETECTED';
-    final confidenceText = '${(result.abnormalityConfidence * 100).toStringAsFixed(1)}% Abnormality Confidence';
-    final topPrediction =
-        result.topPredictions.isNotEmpty ? result.topPredictions.first : null;
+    final label = isAbnormal
+        ? 'ABNORMALITY DETECTED'
+        : 'NO ABNORMALITY DETECTED';
+    final confidenceText =
+        '${(result.abnormalityConfidence * 100).toStringAsFixed(1)}% Abnormality Confidence';
+    final topPrediction = result.topPredictions.isNotEmpty
+        ? result.topPredictions.first
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Center(
-          child: Text(label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                  color: isAbnormal ? Colors.red : primaryBlue,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 22,
-                  letterSpacing: 1.2)),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: isAbnormal ? Colors.red : primaryBlue,
+              fontWeight: FontWeight.w500,
+              fontSize: 22,
+              letterSpacing: 1.2,
+            ),
+          ),
         ),
         const SizedBox(height: 4),
         Center(
-          child: Text(confidenceText,
-              style: GoogleFonts.poppins(
-                  fontSize: 14, color: Colors.black87)),
+          child: Text(
+            confidenceText,
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+          ),
         ),
         const SizedBox(height: 24),
-        Text('BONE PART DETECTED',
-            style: GoogleFonts.oswald(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                letterSpacing: 1.2)),
+        Text(
+          'BONE PART DETECTED',
+          style: GoogleFonts.oswald(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            letterSpacing: 1.2,
+          ),
+        ),
         const SizedBox(height: 12),
         if (topPrediction != null)
           _buildBonePart(
@@ -544,23 +660,36 @@ class _XrayResultPageState extends State<XrayResultPage> {
               children: [
                 const Icon(Icons.error_outline, color: Colors.red, size: 48),
                 const SizedBox(height: 12),
-                Text('Failed to load scan',
-                    style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  'Failed to load scan',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(_errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                        fontSize: 13, color: Colors.black54)),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: darkNavy),
                   onPressed: () {
-                    setState(() { _errorMessage = null; _isLoading = true; });
+                    setState(() {
+                      _errorMessage = null;
+                      _isLoading = true;
+                    });
                     _loadScan();
                   },
-                  child: Text('Retry',
-                      style: GoogleFonts.poppins(color: white)),
+                  child: Text(
+                    'Retry',
+                    style: GoogleFonts.poppins(color: white),
+                  ),
                 ),
               ],
             ),
@@ -582,9 +711,10 @@ class _XrayResultPageState extends State<XrayResultPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Date
-            Text('$dateStr Results',
-                style: GoogleFonts.poppins(
-                    fontSize: 13, color: Colors.black87)),
+            Text(
+              '$dateStr Results',
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
+            ),
             const SizedBox(height: 14),
 
             // X-ray image
@@ -615,8 +745,11 @@ class _XrayResultPageState extends State<XrayResultPage> {
                       setState(() => _currentImageIndex--);
                     }
                   },
-                  child: const Icon(Icons.chevron_left,
-                      color: Colors.black54, size: 24),
+                  child: const Icon(
+                    Icons.chevron_left,
+                    color: Colors.black54,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 ...List.generate(_imageCount, (i) {
@@ -641,8 +774,11 @@ class _XrayResultPageState extends State<XrayResultPage> {
                       setState(() => _currentImageIndex++);
                     }
                   },
-                  child: const Icon(Icons.chevron_right,
-                      color: Colors.black54, size: 24),
+                  child: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.black54,
+                    size: 24,
+                  ),
                 ),
               ],
             ),
