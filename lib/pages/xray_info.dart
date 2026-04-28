@@ -8,6 +8,8 @@ import 'package:speedometer_chart/speedometer_chart.dart';
 
 import '../models/patient.dart';
 import '../models/scan_result.dart';
+import '../pages/add_patient.dart';
+import '../pages/xray_result.dart';
 import '../services/database_service.dart';
 import '../services/model_processing.dart';
 
@@ -31,10 +33,9 @@ class _XrayInfoState extends State<XrayInfo> {
   static const Color bgGrey      = Color(0xFFF0F0F0);
   static const Color fieldBg     = Color(0xFFF0F0F0);
 
-  final ModelProcessor        _processor  = ModelProcessor();
-  final DatabaseService       _db         = DatabaseService();
-  final TextEditingController _searchCtrl = TextEditingController();
-  final FocusNode             _searchFocus = FocusNode();
+  final ModelProcessor        _processor           = ModelProcessor();
+  final DatabaseService       _db                  = DatabaseService();
+  final TextEditingController _interpretationCtrl  = TextEditingController();
 
   ScanResult?  _result;
   Uint8List?   _camImage;
@@ -43,9 +44,7 @@ class _XrayInfoState extends State<XrayInfo> {
   bool         _saving    = false;
 
   Patient?      _selectedPatient;
-  List<Patient> _allPatients   = [];
-  List<Patient> _searchResults = [];
-  bool          _showDropdown  = false;
+  List<Patient> _allPatients = [];
 
   int _currentImageIndex = 0;
   // 0 = original xray, 1 = CAM overlay (reserved for future integration)
@@ -56,14 +55,11 @@ class _XrayInfoState extends State<XrayInfo> {
     super.initState();
     _runAnalysis();
     _loadPatients();
-    _searchCtrl.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
-    _searchCtrl.removeListener(_onSearchChanged);
-    _searchCtrl.dispose();
-    _searchFocus.dispose();
+    _interpretationCtrl.dispose();
     super.dispose();
   }
 
@@ -94,63 +90,78 @@ class _XrayInfoState extends State<XrayInfo> {
     } catch (_) {}
   }
 
-  void _onSearchChanged() {
-    final q = _searchCtrl.text.trim().toLowerCase();
-    if (q.isEmpty) {
-      setState(() { _searchResults = []; _showDropdown = false; });
-      return;
-    }
-    setState(() {
-      _searchResults = _allPatients
-          .where((p) => p.fullName.toLowerCase().contains(q))
-          .take(6)
-          .toList();
-      _showDropdown = true;
-    });
-  }
-
-  void _selectPatient(Patient p) {
-    setState(() {
-      _selectedPatient = p;
-      _showDropdown    = false;
-      _searchCtrl.clear();
-    });
-    _searchFocus.unfocus();
-  }
+  void _selectPatient(Patient p) => setState(() => _selectedPatient = p);
 
   void _clearPatient() => setState(() => _selectedPatient = null);
+
+  Future<void> _showPatientPicker() async {
+    final picked = await showModalBottomSheet<Patient>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _PatientPickerSheet(
+        patients: _allPatients,
+        onAddPatient: () async {
+          Navigator.pop(ctx);
+          final added = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => const AddPatientPage()),
+          );
+          if (added == true) {
+            await _loadPatients();
+            if (mounted) _showPatientPicker();
+          }
+        },
+      ),
+    );
+    if (picked != null) _selectPatient(picked);
+  }
 
   Future<void> _save() async {
     if (_result == null || _saving || _selectedPatient == null) return;
     setState(() => _saving = true);
+
+    final resultWithInterpretation = _result!.copyWith(
+      interpretation: _interpretationCtrl.text.trim(),
+    );
+
     try {
+      final patientId = _selectedPatient!.id;
       final scanId = await _db.createFullXrayScan(
-        patientId: _selectedPatient!.id,
+        patientId: patientId,
         imageFile: widget.imageFile,
       );
 
       if (_camImage != null) {
-        // Write CAM bytes to a temp file, upload via attachAIResultToScan
         final tempFile = File(
           '${Directory.systemTemp.path}/cam_${scanId}_overlay.png',
         );
         await tempFile.writeAsBytes(_camImage!);
         await _db.attachAIResultToScan(
-          patientId: _selectedPatient!.id,
+          patientId: patientId,
           scanId: scanId,
           generatedImages: [tempFile],
-          resultData: _result!,
+          resultData: resultWithInterpretation,
         );
         await tempFile.delete();
       } else {
         await _db.updateXrayScanResult(
-          patientId: _selectedPatient!.id,
+          patientId: patientId,
           scanId: scanId,
-          result: _result!,
+          result: resultWithInterpretation,
         );
       }
 
-      if (mounted) Navigator.pop(context, true);
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => XrayResultPage(
+            patientId: patientId,
+            scanId: scanId,
+          ),
+        ),
+      );
     } catch (e) {
       if (mounted) {
         setState(() => _saving = false);
@@ -256,6 +267,14 @@ class _XrayInfoState extends State<XrayInfo> {
     if (_selectedPatient != null) {
       return Row(
         children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: primaryBlue,
+            child: Text(_selectedPatient!.initials,
+                style: const TextStyle(
+                    color: white, fontSize: 13, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,112 +283,48 @@ class _XrayInfoState extends State<XrayInfo> {
                     style: GoogleFonts.poppins(
                         color: primaryBlue,
                         fontWeight: FontWeight.bold,
-                        fontSize: 18)),
-                Text('${_selectedPatient!.age} Years Old',
+                        fontSize: 15)),
+                Text('${_selectedPatient!.age} yrs · ${_selectedPatient!.sex}',
                     style: GoogleFonts.poppins(
-                        fontSize: 13, color: Colors.black87)),
-                Text(_selectedPatient!.sex,
-                    style: GoogleFonts.poppins(
-                        fontSize: 13, color: Colors.black87)),
+                        fontSize: 12, color: Colors.black54)),
               ],
             ),
           ),
+          TextButton(
+            onPressed: _showPatientPicker,
+            child: Text('Change',
+                style: GoogleFonts.poppins(fontSize: 12, color: primaryBlue)),
+          ),
           IconButton(
-            icon: const Icon(Icons.close, size: 18, color: Colors.black45),
+            icon: const Icon(Icons.close, size: 18, color: Colors.black38),
             onPressed: _clearPatient,
           ),
         ],
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Assign Patient',
-            style: GoogleFonts.poppins(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Colors.black54)),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _searchCtrl,
-          focusNode: _searchFocus,
-          decoration: InputDecoration(
-            hintText: 'Search patient by name…',
-            hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.black38),
-            prefixIcon:
-                const Icon(Icons.search, size: 20, color: Colors.black45),
-            filled: true,
-            fillColor: fieldBg,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none),
-          ),
-          style: GoogleFonts.poppins(fontSize: 13),
+    return GestureDetector(
+      onTap: _showPatientPicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: fieldBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.black12),
         ),
-        if (_showDropdown && _searchResults.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 2),
-            decoration: BoxDecoration(
-              color: white,
-              border: Border.all(color: Colors.black12),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3)),
-              ],
-            ),
-            child: Column(
-              children: _searchResults.map((p) {
-                return InkWell(
-                  onTap: () => _selectPatient(p),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 10),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: primaryBlue,
-                          child: Text(p.initials,
-                              style: const TextStyle(
-                                  color: white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(p.fullName,
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600)),
-                              Text('${p.age} yrs · ${p.sex}',
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 11, color: Colors.black54)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          )
-        else if (_showDropdown && _searchResults.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text('No patients found.',
+        child: Row(
+          children: [
+            const Icon(Icons.person_search_rounded,
+                color: Colors.black45, size: 22),
+            const SizedBox(width: 12),
+            Text('Select Contact',
                 style: GoogleFonts.poppins(
-                    fontSize: 13, color: Colors.black45)),
-          ),
-      ],
+                    fontSize: 14, color: Colors.black45)),
+            const Spacer(),
+            const Icon(Icons.chevron_right, color: Colors.black38, size: 20),
+          ],
+        ),
+      ),
     );
   }
 
@@ -379,6 +334,7 @@ class _XrayInfoState extends State<XrayInfo> {
       return Scaffold(
         backgroundColor: darkNavy,
         appBar: AppBar(
+
           backgroundColor: darkNavy,
           elevation: 0,
           leading: IconButton(
@@ -702,6 +658,42 @@ class _XrayInfoState extends State<XrayInfo> {
                                 horizontal: 24, vertical: 12),
                             child: _buildPatientSelector(),
                           ),
+                          const Divider(
+                              thickness: 1, color: Color(0xFFE0E0E0)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Interpretation',
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black54)),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: _interpretationCtrl,
+                                  maxLines: 4,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'Add clinical notes or interpretation…',
+                                    hintStyle: GoogleFonts.poppins(
+                                        fontSize: 13, color: Colors.black38),
+                                    filled: true,
+                                    fillColor: fieldBg,
+                                    contentPadding: const EdgeInsets.all(12),
+                                    border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: BorderSide.none),
+                                  ),
+                                  style: GoogleFonts.poppins(fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 8),
                         ],
                       ),
@@ -761,6 +753,184 @@ class _XrayInfoState extends State<XrayInfo> {
                             style: GoogleFonts.poppins(
                                 fontSize: 14, fontWeight: FontWeight.w600)),
                   ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Patient picker bottom sheet ──────────────────────────────────────────────
+
+class _PatientPickerSheet extends StatefulWidget {
+  final List<Patient> patients;
+  final VoidCallback  onAddPatient;
+
+  const _PatientPickerSheet({
+    required this.patients,
+    required this.onAddPatient,
+  });
+
+  @override
+  State<_PatientPickerSheet> createState() => _PatientPickerSheetState();
+}
+
+class _PatientPickerSheetState extends State<_PatientPickerSheet> {
+  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color primaryBlue = Color(0xFF1A73E9);
+  static const Color white       = Colors.white;
+
+  final TextEditingController _search = TextEditingController();
+  List<Patient> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.patients;
+    _search.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _search.removeListener(_onSearch);
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _search.text.trim().toLowerCase();
+    setState(() {
+      _filtered = q.isEmpty
+          ? widget.patients
+          : widget.patients
+              .where((p) => p.fullName.toLowerCase().contains(q))
+              .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (_, scrollCtrl) => Container(
+        decoration: const BoxDecoration(
+          color: white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.only(bottom: bottomPad),
+        child: Column(
+          children: [
+            // Handle
+            const SizedBox(height: 10),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Text('Select Patient',
+                      style: GoogleFonts.oswald(
+                          fontSize: 18,
+                          color: darkNavy,
+                          letterSpacing: 1.2)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _search,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search by name…',
+                  hintStyle: GoogleFonts.poppins(
+                      fontSize: 13, color: Colors.black38),
+                  prefixIcon: const Icon(Icons.search,
+                      size: 20, color: Colors.black45),
+                  filled: true,
+                  fillColor: const Color(0xFFF0F0F0),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 10),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none),
+                ),
+                style: GoogleFonts.poppins(fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+
+            // List
+            Expanded(
+              child: ListView(
+                controller: scrollCtrl,
+                children: [
+                  // Add new patient
+                  ListTile(
+                    leading: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: primaryBlue.withValues(alpha: 0.12),
+                      child: const Icon(Icons.person_add_alt_1_rounded,
+                          color: primaryBlue, size: 20),
+                    ),
+                    title: Text('Add New Patient',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: primaryBlue)),
+                    onTap: widget.onAddPatient,
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+
+                  if (_filtered.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text('No patients found.',
+                            style: GoogleFonts.poppins(
+                                fontSize: 13, color: Colors.black38)),
+                      ),
+                    )
+                  else
+                    ..._filtered.map((p) => ListTile(
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: darkNavy,
+                            child: Text(p.initials,
+                                style: const TextStyle(
+                                    color: white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text(p.fullName,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                              '${p.age} yrs · ${p.sex}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12, color: Colors.black54)),
+                          onTap: () => Navigator.pop(context, p),
+                        )),
                 ],
               ),
             ),

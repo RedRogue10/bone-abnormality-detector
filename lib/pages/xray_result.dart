@@ -2,14 +2,18 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show consolidateHttpClientResponseBytes;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../models/scan_result.dart';
 import '../models/xray_scan.dart';
 import '../services/database_service.dart';
+import '../services/email_service.dart';
+import '../services/sharing_service.dart';
 
 class XrayResultPage extends StatefulWidget {
   final String patientId;
@@ -30,13 +34,16 @@ class _XrayResultPageState extends State<XrayResultPage> {
   static const Color primaryBlue = Color(0xFF1A73E9);
   static const Color white       = Colors.white;
 
-  final DatabaseService _db = DatabaseService();
+  final DatabaseService       _db                 = DatabaseService();
+  final TextEditingController _interpretationCtrl = TextEditingController();
 
   XrayScan?   _scan;
   ScanResult? _result;
   Uint8List?  _camImageBytes;
   String?     _errorMessage;
-  bool        _isLoading = true;
+  bool        _isLoading   = true;
+  bool        _sharing     = false;
+  bool        _savingNote  = false;
 
   int _currentImageIndex = 0;
   static const int _imageCount = 2;
@@ -45,6 +52,12 @@ class _XrayResultPageState extends State<XrayResultPage> {
   void initState() {
     super.initState();
     _loadScan();
+  }
+
+  @override
+  void dispose() {
+    _interpretationCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadScan() async {
@@ -68,10 +81,202 @@ class _XrayResultPageState extends State<XrayResultPage> {
           _camImageBytes = camBytes;
           _isLoading = false;
         });
+        _interpretationCtrl.text = scan.result?.interpretation ?? '';
       }
     } catch (e) {
       if (mounted) setState(() { _errorMessage = e.toString(); _isLoading = false; });
     }
+  }
+
+  Future<void> _saveInterpretation() async {
+    final text = _interpretationCtrl.text.trim();
+    if (_result == null) return;
+    setState(() => _savingNote = true);
+    try {
+      await _db.updateInterpretation(
+        patientId: widget.patientId,
+        scanId: widget.scanId,
+        interpretation: text,
+      );
+      if (mounted) {
+        setState(() {
+          _result = _result!.copyWith(interpretation: text);
+          _savingNote = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Interpretation saved.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _savingNote = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _share() async {
+    setState(() => _sharing = true);
+    try {
+      final doctorId = FirebaseAuth.instance.currentUser!.uid;
+      final link = await SharingService().generateSecureLink(
+        doctorId: doctorId,
+        patientId: widget.patientId,
+        scanId: widget.scanId,
+      );
+      if (!mounted) return;
+      _showShareSheet(link);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not generate link: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  void _showShareSheet(String link) {
+    final emailCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Share Results',
+                  style: GoogleFonts.oswald(
+                      fontSize: 18,
+                      color: darkNavy,
+                      letterSpacing: 1.2)),
+              const SizedBox(height: 16),
+
+              // Link row
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F0F0),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(link,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, color: Colors.black54)),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: link));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Link copied.')),
+                        );
+                      },
+                      child: const Icon(Icons.copy_rounded,
+                          size: 18, color: primaryBlue),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Text('Send via email',
+                  style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black54)),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        hintText: 'patient@email.com',
+                        hintStyle: GoogleFonts.poppins(
+                            fontSize: 13, color: Colors.black38),
+                        filled: true,
+                        fillColor: const Color(0xFFF0F0F0),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none),
+                      ),
+                      style: GoogleFonts.poppins(fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: darkNavy,
+                      foregroundColor: white,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 13),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      elevation: 0,
+                    ),
+                    onPressed: () async {
+                      final email = emailCtrl.text.trim();
+                      if (email.isEmpty) return;
+                      Navigator.pop(ctx);
+                      try {
+                        await EmailService().sendEmailLink(email, link);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Results sent to patient.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Email failed: $e')),
+                          );
+                        }
+                      }
+                    },
+                    child: Text('Send',
+                        style: GoogleFonts.poppins(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showImageViewer() {
@@ -216,6 +421,57 @@ class _XrayResultPageState extends State<XrayResultPage> {
             topPrediction.bonePart.toUpperCase(),
             '${(topPrediction.confidence * 100).toStringAsFixed(1)}% Confidence',
           ),
+        const SizedBox(height: 28),
+        const Divider(),
+        const SizedBox(height: 16),
+        Text('INTERPRETATION',
+            style: GoogleFonts.oswald(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                letterSpacing: 1.2)),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _interpretationCtrl,
+          maxLines: 5,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            hintText: 'Add clinical notes or interpretation…',
+            hintStyle:
+                GoogleFonts.poppins(fontSize: 13, color: Colors.black38),
+            filled: true,
+            fillColor: const Color(0xFFF0F0F0),
+            contentPadding: const EdgeInsets.all(12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none),
+          ),
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton(
+            onPressed: _savingNote ? null : _saveInterpretation,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: darkNavy,
+              foregroundColor: white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: _savingNote
+                ? const SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
+                : Text('Save Note',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+          ),
+        ),
       ],
     );
   }
@@ -235,6 +491,21 @@ class _XrayResultPageState extends State<XrayResultPage> {
                 letterSpacing: 2)),
         centerTitle: true,
         actions: [
+          if (_sharing)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: SizedBox(
+                width: 20, height: 20,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.share_outlined, color: white),
+              tooltip: 'Share results',
+              onPressed: _isLoading ? null : _share,
+            ),
           IconButton(
             icon: const Icon(Icons.account_circle_outlined, color: white),
             onPressed: () {},
