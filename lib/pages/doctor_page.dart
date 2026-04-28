@@ -5,6 +5,7 @@ import 'edit_doctor_info.dart';
 import '../services/database_service.dart';
 import 'package:bone_abnormality_detector/services/auth.dart';
 import 'package:go_router/go_router.dart';
+import 'login.dart';
 
 class DoctorPage extends StatefulWidget {
   final String userId;
@@ -199,6 +200,13 @@ class _DoctorPageState extends State<DoctorPage> {
                     onPressed: () async {
                       await Auth().signOut();
                       if (!context.mounted) return;
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                        (Route<dynamic> route) => false,
+                      );
+
                       context.go('/login');
                     },
                     icon: const Icon(Icons.logout, size: 17),
