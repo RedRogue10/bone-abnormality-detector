@@ -216,7 +216,6 @@ class _XrayResultPageState extends State<XrayResultPage> {
     try {
       final doctorId = FirebaseAuth.instance.currentUser!.uid;
       final link = await SharingService().generateSecureLink(
-        doctorId: doctorId,
         patientId: widget.patientId,
         scanId: widget.scanId,
       );
