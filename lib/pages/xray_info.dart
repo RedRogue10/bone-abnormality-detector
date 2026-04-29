@@ -447,6 +447,48 @@ class _XrayInfoState extends State<XrayInfo> {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
+                          if (_selectedPatient != null) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor:
+                                      Colors.white.withValues(alpha: 0.2),
+                                  child: Text(
+                                    _selectedPatient!.initials,
+                                    style: GoogleFonts.poppins(
+                                        color: white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _selectedPatient!.fullName,
+                                        style: GoogleFonts.poppins(
+                                            color: white,
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15),
+                                      ),
+                                      Text(
+                                        '${_selectedPatient!.age} yrs · ${_selectedPatient!.sex}',
+                                        style: GoogleFonts.poppins(
+                                            color: Colors.white70,
+                                            fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                          ],
                           const SizedBox(height: 20),
                           Text(
                             isAbnormal

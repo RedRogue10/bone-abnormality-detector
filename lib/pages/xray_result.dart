@@ -1,11 +1,6 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter/foundation.dart'
-    show consolidateHttpClientResponseBytes;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show consolidateHttpClientResponseBytes;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -42,7 +37,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
 
   XrayScan? _scan;
   ScanResult? _result;
-  Uint8List?  _camImageBytes;
+  String?     _camImageUrl;
   String?     _errorMessage;
   bool        _isLoading   = true;
   bool        _sharing     = false;
@@ -66,22 +61,13 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Future<void> _loadScan() async {
     try {
       final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
-      Uint8List? camBytes;
-      final camUrl = scan.result?.generatedImageUrls.isNotEmpty == true
-          ? scan.result!.generatedImageUrls.first
-          : null;
-      if (camUrl != null) {
-        try {
-          final request = await HttpClient().getUrl(Uri.parse(camUrl));
-          final response = await request.close();
-          camBytes = await consolidateHttpClientResponseBytes(response);
-        } catch (_) {}
-      }
       if (mounted) {
         setState(() {
           _scan = scan;
           _result = scan.result;
-          _camImageBytes = camBytes;
+          _camImageUrl = scan.result?.generatedImageUrls.isNotEmpty == true
+              ? scan.result!.generatedImageUrls.first
+              : null;
           _isLoading = false;
         });
         _interpretationCtrl.text = scan.result?.interpretation ?? '';
@@ -424,8 +410,18 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Widget _buildImageForIndex(int index) {
     if (index == 0) return _buildNetworkImage();
 
-    if (_camImageBytes != null) {
-      return Image.memory(_camImageBytes!, fit: BoxFit.contain);
+    if (_camImageUrl != null) {
+      return Image.network(
+        _camImageUrl!,
+        fit: BoxFit.contain,
+        loadingBuilder: (context, child, progress) => progress == null
+            ? child
+            : const Center(
+                child: CircularProgressIndicator(color: Colors.white)),
+        errorBuilder: (context, error, stack) =>
+            const Icon(Icons.broken_image_outlined,
+                color: Colors.white38, size: 64),
+      );
     }
 
     return const Center(
