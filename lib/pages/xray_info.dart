@@ -12,6 +12,7 @@ import '../pages/add_patient.dart';
 import '../pages/xray_result.dart';
 import '../services/database_service.dart';
 import '../services/model_processing.dart';
+import '../widgets/preset_picker_sheet.dart';
 
 class XrayInfo extends StatefulWidget {
   final File    imageFile;
@@ -708,11 +709,43 @@ class _XrayInfoState extends State<XrayInfo> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Interpretation',
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black54)),
+                                Row(
+                                  children: [
+                                    Text('Interpretation',
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.black54)),
+                                    const Spacer(),
+                                    TextButton.icon(
+                                      icon: const Icon(
+                                          Icons.format_list_bulleted,
+                                          size: 15),
+                                      label: Text('Presets',
+                                          style: GoogleFonts.poppins(
+                                              fontSize: 12)),
+                                      style: TextButton.styleFrom(
+                                          foregroundColor: primaryBlue,
+                                          padding: EdgeInsets.zero,
+                                          minimumSize: Size.zero,
+                                          tapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap),
+                                      onPressed: () async {
+                                        final body =
+                                            await showModalBottomSheet<String>(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (_) =>
+                                              const PresetPickerSheet(),
+                                        );
+                                        if (body != null) {
+                                          _interpretationCtrl.text = body;
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller: _interpretationCtrl,

@@ -11,6 +11,7 @@ import '../models/xray_scan.dart';
 import '../services/database_service.dart';
 import '../services/sharing_service.dart';
 import '../services/email_service.dart';
+import '../widgets/preset_picker_sheet.dart';
 
 class XrayResultPage extends StatefulWidget {
   final String patientId;
@@ -535,12 +536,35 @@ class _XrayResultPageState extends State<XrayResultPage> {
         const SizedBox(height: 28),
         const Divider(),
         const SizedBox(height: 16),
-        Text('INTERPRETATION',
-            style: GoogleFonts.oswald(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                letterSpacing: 1.2)),
+        Row(
+          children: [
+            Text('INTERPRETATION',
+                style: GoogleFonts.oswald(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    letterSpacing: 1.2)),
+            const Spacer(),
+            TextButton.icon(
+              icon: const Icon(Icons.format_list_bulleted, size: 15),
+              label: Text('Presets', style: GoogleFonts.poppins(fontSize: 12)),
+              style: TextButton.styleFrom(
+                  foregroundColor: primaryBlue,
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              onPressed: () async {
+                final body = await showModalBottomSheet<String>(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => const PresetPickerSheet(),
+                );
+                if (body != null) _interpretationCtrl.text = body;
+              },
+            ),
+          ],
+        ),
         const SizedBox(height: 10),
         TextField(
           controller: _interpretationCtrl,

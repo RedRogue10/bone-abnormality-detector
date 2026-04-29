@@ -10,6 +10,7 @@ import '../models/user.dart';
 import '../models/patient.dart';
 import '../models/xray_scan.dart';
 import '../models/scan_result.dart';
+import '../models/interpretation_preset.dart';
 
 const String DOCTOR_COLLECTION_REF = "users";
 
@@ -464,5 +465,39 @@ class DatabaseService {
       scanId: scanId,
       result: updatedResult,
     );
+  }
+
+  // ── Interpretation Presets ────────────────────────────────────────────────
+
+  CollectionReference<Map<String, dynamic>> get _presetsRef {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    return _firestore
+        .collection(DOCTOR_COLLECTION_REF)
+        .doc(uid)
+        .collection('interpretation_presets');
+  }
+
+  Future<List<InterpretationPreset>> getPresets() async {
+    final snap = await _presetsRef.orderBy('createdAt').get();
+    return snap.docs
+        .map((d) => InterpretationPreset.fromMap(d.data(), d.id))
+        .toList();
+  }
+
+  Future<void> addPreset(String title, String body) async {
+    await _presetsRef.add(InterpretationPreset(
+      id:        '',
+      title:     title,
+      body:      body,
+      createdAt: DateTime.now(),
+    ).toMap());
+  }
+
+  Future<void> updatePreset(String id, String title, String body) async {
+    await _presetsRef.doc(id).update({'title': title, 'body': body});
+  }
+
+  Future<void> deletePreset(String id) async {
+    await _presetsRef.doc(id).delete();
   }
 }
