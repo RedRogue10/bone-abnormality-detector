@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:bone_abnormality_detector/firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,13 +8,10 @@ import 'package:go_router/go_router.dart';
 
 import 'pages/dashboard.dart';
 import 'pages/camera_capture.dart';
-import 'pages/splash_screen.dart';
 import 'pages/login.dart';
 import 'web/patient_web_view.dart';
 
 import 'services/database_service.dart';
-import 'services/sharing_service.dart';
-import 'services/email_service.dart';
 
 import 'models/bone_prediction.dart';
 import 'models/scan_result.dart';
@@ -38,7 +34,7 @@ final GoRouter _router = GoRouter(
     final isLoggingIn = path == '/login';
 
     if (!loggedIn && !isLoggingIn) {
-      // Not logged in and trying to access dashboard? Go to login.
+      // Not logged in and trying to access dashboard --> Go to login.
       return '/login';
     }
 
@@ -103,32 +99,6 @@ class MyApp extends StatelessWidget {
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
-
-  Future<void> _testAddScan() async {
-    try {
-      await DatabaseService().createXrayScan(patientId: 'FmnTTC426eN34O1mhSta');
-
-      print('Test scan added successfully!');
-    } catch (e) {
-      print('Error adding test scan: $e');
-    }
-  }
-
-  Future<void> _testStorage() async {
-    try {
-      final storageRef = FirebaseStorage.instance.ref();
-      final testFileRef = storageRef.child('test_upload.txt');
-
-      // Upload file
-      await testFileRef.putString('This is a test file for Firebase Storage.');
-
-      // Get the download URL
-      final downloadUrl = await testFileRef.getDownloadURL();
-      print('File uploaded successfully! Download URL: $downloadUrl');
-    } catch (e) {
-      print('Error testing Firebase Storage: $e');
-    }
-  }
 
   Future<void> _testXrayPipeline() async {
     try {
@@ -214,63 +184,6 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-
-              ElevatedButton(
-                onPressed: () {
-                  String interpretation = 'Doctor\'s interpretation';
-                  DatabaseService().updateInterpretation(
-                    patientId: 'FmnTTC426eN34O1mhSta',
-                    scanId: 'i1tyaiyv904tPBj6DS1R',
-                    interpretation: interpretation,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Update Interpretation',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Results Page button
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Go to Results Page',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
@@ -294,54 +207,6 @@ class HomePage extends StatelessWidget {
                 ),
                 child: const Text(
                   'Go to Camera Page',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _testAddScan,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Add Xray Scan',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _testStorage,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Test Storage',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -390,82 +255,6 @@ class HomePage extends StatelessWidget {
                 ),
                 child: const Text(
                   'Test AI Update',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Information Page button
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SplashScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Go to Splash Screen',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-
-              ElevatedButton(
-                onPressed: () async {
-                  final sharingService = SharingService();
-
-                  // Generate the link
-                  String secureLink = await sharingService.generateSecureLink(
-                    patientId: 'FmnTTC426eN34O1mhSta',
-                    scanId: 'i1tyaiyv904tPBj6DS1R',
-                  );
-                  final emailservice = EmailService();
-
-                  // Pass link to email function
-                  await emailservice.sendEmailLink(
-                    'kslabao@up.edu.ph',
-                    secureLink,
-                  );
-                  print('LINK: ${secureLink}');
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Secure link sent to patient!"),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0B2545),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 40,
-                    vertical: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 4,
-                ),
-                child: const Text(
-                  'Send Email Link',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

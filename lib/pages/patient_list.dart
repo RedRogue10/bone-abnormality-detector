@@ -26,7 +26,7 @@ class _PatientListPageState extends State<PatientListPage> {
   static const Color bgGrey = Color(0xFFF0F0F0);
 
   // Sort Options
-  static const List<String> _sortOptions = ['Name (A-Z)', 'Age', 'Date added'];
+  static const List<String> _sortOptions = ['Name (A-Z)', 'Age'];
   String _selectedSort = 'Name (A-Z)';
   bool _showSortDropdown = false;
   late final Stream<List<Patient>> _patientStream;
@@ -372,10 +372,6 @@ class _PatientListPageState extends State<PatientListPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  'Today', 
-                  style: GoogleFonts.poppins(color: grey, fontSize: 11),
-                ),
                 const SizedBox(height: 6),
                 const Icon(Icons.arrow_forward_ios, size: 13, color: grey),
               ],
