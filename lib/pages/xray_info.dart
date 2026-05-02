@@ -16,7 +16,7 @@ import '../services/model_processing.dart';
 import '../widgets/preset_picker_sheet.dart';
 
 class XrayInfo extends StatefulWidget {
-  final File    imageFile;
+  final File imageFile;
   final String? patientId;
 
   const XrayInfo({super.key, required this.imageFile, this.patientId});
@@ -26,27 +26,30 @@ class XrayInfo extends StatefulWidget {
 }
 
 class _XrayInfoState extends State<XrayInfo> {
-  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  static const Color darkRed     = Color(0xFF450B0B);
-  static const Color green       = Color(0xFF0B4518);
-  static const Color grey        = Color(0xFF808080);
-  static const Color white       = Colors.white;
-  static const Color bgGrey      = Color(0xFFF0F0F0);
-  static const Color fieldBg     = Color(0xFFF0F0F0);
+  static const Color darkRed = Color(0xFF450B0B);
+  static const Color green = Color(0xFF0B4518);
+  static const Color grey = Color(0xFF808080);
+  static const Color white = Colors.white;
+  static const Color bgGrey = Color(0xFFF0F0F0);
+  static const Color fieldBg = Color(0xFFF0F0F0);
 
-  final ModelProcessor        _processor           = ModelProcessor();
-  final DatabaseService       _db                  = DatabaseService();
-  final TextEditingController _interpretationCtrl  = TextEditingController();
+  final ModelProcessor _processor = ModelProcessor();
+  final DatabaseService _db = DatabaseService();
+  final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
 
-  ScanResult?  _result;
-  Uint8List?   _camImage;
-  String?      _errorMessage;
-  bool         _isLoading = true;
-  bool         _saving    = false;
+  ScanResult? _result;
+  Uint8List? _camImage;
+  String? _errorMessage;
+  bool _isLoading = true;
+  bool _saving = false;
 
-  Patient?      _selectedPatient;
+  Patient? _selectedPatient;
   List<Patient> _allPatients = [];
+  List<Patient> _searchResults = [];
+  bool _showDropdown = false;
   List<InterpretationPreset> _presets = [];
 
   int _currentImageIndex = 0;
@@ -70,13 +73,20 @@ class _XrayInfoState extends State<XrayInfo> {
   Future<void> _runAnalysis() async {
     try {
       final output = await _processor.analyzeImage(widget.imageFile);
-      if (mounted) setState(() {
-        _result   = output.result;
-        _camImage = output.camImage;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _result = output.result;
+          _camImage = output.camImage;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() { _errorMessage = e.toString(); _isLoading = false; });
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -101,7 +111,32 @@ class _XrayInfoState extends State<XrayInfo> {
     } catch (_) {}
   }
 
-  void _selectPatient(Patient p) => setState(() => _selectedPatient = p);
+  void _onSearchChanged() {
+    final q = _searchCtrl.text.trim().toLowerCase();
+    if (q.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _showDropdown = false;
+      });
+      return;
+    }
+    setState(() {
+      _searchResults = _allPatients
+          .where((p) => p.fullName.toLowerCase().contains(q))
+          .take(6)
+          .toList();
+      _showDropdown = true;
+    });
+  }
+
+  void _selectPatient(Patient p) {
+    setState(() {
+      _selectedPatient = p;
+      _showDropdown = false;
+      _searchCtrl.clear();
+    });
+    _searchFocus.unfocus();
+  }
 
   void _clearPatient() => setState(() => _selectedPatient = null);
 
@@ -174,11 +209,12 @@ class _XrayInfoState extends State<XrayInfo> {
         ),
       );
     } catch (e) {
+      print("SAVE ERROR: $e");
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save: $e')));
       }
     }
   }
@@ -248,8 +284,10 @@ class _XrayInfoState extends State<XrayInfo> {
         children: [
           Icon(Icons.layers_outlined, color: Colors.white38, size: 64),
           SizedBox(height: 12),
-          Text('CAM overlay coming soon',
-              style: TextStyle(color: Colors.white38, fontSize: 13)),
+          Text(
+            'CAM overlay coming soon',
+            style: TextStyle(color: Colors.white38, fontSize: 13),
+          ),
         ],
       ),
     );
@@ -261,14 +299,21 @@ class _XrayInfoState extends State<XrayInfo> {
       children: [
         SizedBox(
           width: 120,
-          child: Text(label,
-              style: GoogleFonts.poppins(
-                  fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+          child: Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
         ),
         Expanded(
-          child: Text(value,
-              style: GoogleFonts.poppins(fontSize: 16, letterSpacing: 0.5),
-              softWrap: true),
+          child: Text(
+            value,
+            style: GoogleFonts.poppins(fontSize: 16, letterSpacing: 0.5),
+            softWrap: true,
+          ),
         ),
       ],
     );
@@ -278,26 +323,32 @@ class _XrayInfoState extends State<XrayInfo> {
     if (_selectedPatient != null) {
       return Row(
         children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: primaryBlue,
-            child: Text(_selectedPatient!.initials,
-                style: const TextStyle(
-                    color: white, fontSize: 13, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_selectedPatient!.fullName,
-                    style: GoogleFonts.poppins(
-                        color: primaryBlue,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15)),
-                Text('${_selectedPatient!.age} yrs · ${_selectedPatient!.sex}',
-                    style: GoogleFonts.poppins(
-                        fontSize: 12, color: Colors.black54)),
+                Text(
+                  _selectedPatient!.fullName,
+                  style: GoogleFonts.poppins(
+                    color: primaryBlue,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  '${_selectedPatient!.age} Years Old',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  _selectedPatient!.sex,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
               ],
             ),
           ),
@@ -314,6 +365,115 @@ class _XrayInfoState extends State<XrayInfo> {
       );
     }
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Assign Patient',
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _searchCtrl,
+          focusNode: _searchFocus,
+          decoration: InputDecoration(
+            hintText: 'Search patient by name…',
+            hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.black38),
+            prefixIcon: const Icon(
+              Icons.search,
+              size: 20,
+              color: Colors.black45,
+            ),
+            filled: true,
+            fillColor: fieldBg,
+            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+          ),
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        if (_showDropdown && _searchResults.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            decoration: BoxDecoration(
+              color: white,
+              border: Border.all(color: Colors.black12),
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              children: _searchResults.map((p) {
+                return InkWell(
+                  onTap: () => _selectPatient(p),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: primaryBlue,
+                          child: Text(
+                            p.initials,
+                            style: const TextStyle(
+                              color: white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                p.fullName,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                '${p.age} yrs · ${p.sex}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          )
+        else if (_showDropdown && _searchResults.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'No patients found.',
+              style: GoogleFonts.poppins(fontSize: 13, color: Colors.black45),
+            ),
+          ),
+      ],
     return GestureDetector(
       onTap: _showPatientPicker,
       child: Container(
@@ -352,9 +512,14 @@ class _XrayInfoState extends State<XrayInfo> {
             icon: const Icon(Icons.chevron_left, color: white, size: 28),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('Abnormality Detection Result',
-              style: GoogleFonts.oswald(
-                  color: white, fontSize: 20, letterSpacing: 1.5)),
+          title: Text(
+            'Abnormality Detection Result',
+            style: GoogleFonts.oswald(
+              color: white,
+              fontSize: 20,
+              letterSpacing: 1.5,
+            ),
+          ),
           centerTitle: true,
         ),
         body: const Center(
@@ -363,8 +528,7 @@ class _XrayInfoState extends State<XrayInfo> {
             children: [
               CircularProgressIndicator(color: white),
               SizedBox(height: 16),
-              Text('Analysing image…',
-                  style: TextStyle(color: white)),
+              Text('Analysing image…', style: TextStyle(color: white)),
             ],
           ),
         ),
@@ -381,9 +545,14 @@ class _XrayInfoState extends State<XrayInfo> {
             icon: const Icon(Icons.chevron_left, color: white, size: 28),
             onPressed: () => Navigator.pop(context),
           ),
-          title: Text('Abnormality Detection Result',
-              style: GoogleFonts.oswald(
-                  color: white, fontSize: 20, letterSpacing: 1.5)),
+          title: Text(
+            'Abnormality Detection Result',
+            style: GoogleFonts.oswald(
+              color: white,
+              fontSize: 20,
+              letterSpacing: 1.5,
+            ),
+          ),
           centerTitle: true,
         ),
         body: Center(
@@ -394,23 +563,36 @@ class _XrayInfoState extends State<XrayInfo> {
               children: [
                 const Icon(Icons.error_outline, color: Colors.red, size: 48),
                 const SizedBox(height: 12),
-                Text('Analysis failed',
-                    style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  'Analysis failed',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(_errorMessage!,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                        fontSize: 13, color: Colors.black54)),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: darkNavy),
                   onPressed: () {
-                    setState(() { _errorMessage = null; _isLoading = true; });
+                    setState(() {
+                      _errorMessage = null;
+                      _isLoading = true;
+                    });
                     _runAnalysis();
                   },
-                  child: Text('Retry',
-                      style: GoogleFonts.poppins(color: white)),
+                  child: Text(
+                    'Retry',
+                    style: GoogleFonts.poppins(color: white),
+                  ),
                 ),
               ],
             ),
@@ -419,7 +601,7 @@ class _XrayInfoState extends State<XrayInfo> {
       );
     }
 
-    final isAbnormal  = _result?.hasAbnormality ?? false;
+    final isAbnormal = _result?.hasAbnormality ?? false;
     final headerColor = isAbnormal ? darkRed : green;
     final displayConfidence = _result!.abnormalityConfidence * 100;
 
@@ -432,9 +614,14 @@ class _XrayInfoState extends State<XrayInfo> {
           icon: const Icon(Icons.chevron_left, color: white, size: 28),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Abnormality Detection Result',
-            style: GoogleFonts.oswald(
-                color: white, fontSize: 20, letterSpacing: 1.5)),
+        title: Text(
+          'Abnormality Detection Result',
+          style: GoogleFonts.oswald(
+            color: white,
+            fontSize: 20,
+            letterSpacing: 1.5,
+          ),
+        ),
         centerTitle: true,
         actions: [
           Container(
@@ -505,8 +692,10 @@ class _XrayInfoState extends State<XrayInfo> {
                             isAbnormal
                                 ? 'Abnormality Detected'
                                 : 'No Abnormality Detected',
-                            style:
-                                GoogleFonts.oswald(fontSize: 24, color: white),
+                            style: GoogleFonts.oswald(
+                              fontSize: 24,
+                              color: white,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 40),
@@ -525,8 +714,10 @@ class _XrayInfoState extends State<XrayInfo> {
                           ),
                           Text(
                             '${displayConfidence.toStringAsFixed(1)}% Confidence',
-                            style:
-                                GoogleFonts.inter(fontSize: 22, color: white),
+                            style: GoogleFonts.inter(
+                              fontSize: 22,
+                              color: white,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 40),
@@ -534,8 +725,10 @@ class _XrayInfoState extends State<XrayInfo> {
                             isAbnormal
                                 ? 'High abnormality detected. Please consult a specialist.'
                                 : 'No significant abnormality detected.',
-                            style:
-                                GoogleFonts.inter(fontSize: 16, color: white),
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              color: white,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -567,24 +760,28 @@ class _XrayInfoState extends State<XrayInfo> {
                                     GestureDetector(
                                       onTap: () {
                                         if (_currentImageIndex > 0) {
-                                          setState(
-                                              () => _currentImageIndex--);
+                                          setState(() => _currentImageIndex--);
                                         }
                                       },
-                                      child: const Icon(Icons.chevron_left,
-                                          color: Colors.black54, size: 24),
+                                      child: const Icon(
+                                        Icons.chevron_left,
+                                        color: Colors.black54,
+                                        size: 24,
+                                      ),
                                     ),
                                     const SizedBox(width: 8),
                                     ...List.generate(_imageCount, (i) {
                                       final active = i == _currentImageIndex;
                                       return GestureDetector(
                                         onTap: () => setState(
-                                            () => _currentImageIndex = i),
+                                          () => _currentImageIndex = i,
+                                        ),
                                         child: Container(
                                           width: active ? 12 : 10,
                                           height: active ? 12 : 10,
                                           margin: const EdgeInsets.symmetric(
-                                              horizontal: 4),
+                                            horizontal: 4,
+                                          ),
                                           decoration: BoxDecoration(
                                             shape: BoxShape.circle,
                                             color: active
@@ -599,12 +796,14 @@ class _XrayInfoState extends State<XrayInfo> {
                                       onTap: () {
                                         if (_currentImageIndex <
                                             _imageCount - 1) {
-                                          setState(
-                                              () => _currentImageIndex++);
+                                          setState(() => _currentImageIndex++);
                                         }
                                       },
-                                      child: const Icon(Icons.chevron_right,
-                                          color: Colors.black54, size: 24),
+                                      child: const Icon(
+                                        Icons.chevron_right,
+                                        color: Colors.black54,
+                                        size: 24,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -620,9 +819,10 @@ class _XrayInfoState extends State<XrayInfo> {
                               Text(
                                 'This is an AI-generated result. Review required.',
                                 style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: darkNavy,
-                                    fontStyle: FontStyle.italic),
+                                  fontSize: 12,
+                                  color: darkNavy,
+                                  fontStyle: FontStyle.italic,
+                                ),
                               ),
                             ],
                           ),
@@ -664,7 +864,9 @@ class _XrayInfoState extends State<XrayInfo> {
                           // Bone part predictions
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 30, vertical: 12),
+                              horizontal: 30,
+                              vertical: 12,
+                            ),
                             child: Column(
                               children: [
                                 Align(
@@ -672,30 +874,39 @@ class _XrayInfoState extends State<XrayInfo> {
                                   child: Text(
                                     'Bone Part Detected',
                                     style: GoogleFonts.inter(
-                                        fontSize: 18,
-                                        color: primaryBlue,
-                                        letterSpacing: 1),
+                                      fontSize: 18,
+                                      color: primaryBlue,
+                                      letterSpacing: 1,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12),
+                                    horizontal: 12,
+                                  ),
                                   child: Column(
-                                    children: _result == null ||
+                                    children:
+                                        _result == null ||
                                             _result!.topPredictions.isEmpty
                                         ? [
-                                            Text('No predictions available.',
-                                                style: GoogleFonts.poppins(
-                                                    fontSize: 14, color: grey))
+                                            Text(
+                                              'No predictions available.',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                color: grey,
+                                              ),
+                                            ),
                                           ]
                                         : _result!.topPredictions
-                                            .map((p) => _buildInfoRow(
+                                              .map(
+                                                (p) => _buildInfoRow(
                                                   p.bonePart[0].toUpperCase() +
                                                       p.bonePart.substring(1),
                                                   '${(p.confidence * 100).toStringAsFixed(1)}% Confidence',
-                                                ))
-                                            .toList(),
+                                                ),
+                                              )
+                                              .toList(),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -704,11 +915,12 @@ class _XrayInfoState extends State<XrayInfo> {
                           ),
 
                           // Patient selector
-                          const Divider(
-                              thickness: 1, color: Color(0xFFE0E0E0)),
+                          const Divider(thickness: 1, color: Color(0xFFE0E0E0)),
                           Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 12),
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
                             child: _buildPatientSelector(),
                           ),
                           const Divider(
@@ -790,8 +1002,7 @@ class _XrayInfoState extends State<XrayInfo> {
 
             // Retake / Save
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               color: white,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -802,18 +1013,26 @@ class _XrayInfoState extends State<XrayInfo> {
                       backgroundColor: darkNavy,
                       foregroundColor: white,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
-                    child: Text('Retake',
-                        style: GoogleFonts.poppins(
-                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      'Retake',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
-                    onPressed: (_selectedPatient != null &&
+                    onPressed:
+                        (_selectedPatient != null &&
                             _result != null &&
                             !_saving)
                         ? _save
@@ -823,9 +1042,12 @@ class _XrayInfoState extends State<XrayInfo> {
                       foregroundColor: white,
                       disabledBackgroundColor: Colors.grey.shade400,
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       elevation: 0,
                     ),
                     child: _saving
@@ -833,10 +1055,17 @@ class _XrayInfoState extends State<XrayInfo> {
                             width: 18,
                             height: 18,
                             child: CircularProgressIndicator(
-                                color: white, strokeWidth: 2))
-                        : Text('Save',
+                              color: white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'Save',
                             style: GoogleFonts.poppins(
-                                fontSize: 14, fontWeight: FontWeight.w600)),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ],
               ),

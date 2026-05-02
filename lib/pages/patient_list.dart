@@ -16,11 +16,7 @@ class _PatientListPageState extends State<PatientListPage> {
   // Colors
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
-  // static const Color altBlue = Color(0xFF276ED1);
-  // static const Color darkRed = Color(0xFF833838);
-  // static const Color orange = Color(0xFFD16227);
   static const Color gold = Color(0xFFD19527);
-  // static const Color purple = Color(0xFF463883);
   static const Color grey = Color(0xFF808080);
   static const Color white = Colors.white;
   static const Color bgGrey = Color(0xFFF0F0F0);
@@ -86,13 +82,9 @@ class _PatientListPageState extends State<PatientListPage> {
           ),
           title: Text(
             'PATIENT LIST',
-            style: GoogleFonts.oswald(
-              color: white,
-              fontSize: 20,
-            ),
+            style: GoogleFonts.oswald(color: white, fontSize: 20),
           ),
           centerTitle: true,
-        
         ),
 
         floatingActionButton: FloatingActionButton(
@@ -334,8 +326,7 @@ class _PatientListPageState extends State<PatientListPage> {
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor:
-                  primaryBlue, 
+              backgroundColor: primaryBlue,
               child: Text(
                 patient.initials,
                 style: GoogleFonts.poppins(
