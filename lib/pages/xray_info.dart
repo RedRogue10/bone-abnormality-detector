@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speedometer_chart/speedometer_chart.dart';
 
+import '../models/interpretation_preset.dart';
 import '../models/patient.dart';
 import '../models/scan_result.dart';
 import '../pages/add_patient.dart';
@@ -46,6 +47,7 @@ class _XrayInfoState extends State<XrayInfo> {
 
   Patient?      _selectedPatient;
   List<Patient> _allPatients = [];
+  List<InterpretationPreset> _presets = [];
 
   int _currentImageIndex = 0;
   // 0 = original xray, 1 = CAM overlay (reserved for future integration)
@@ -56,6 +58,7 @@ class _XrayInfoState extends State<XrayInfo> {
     super.initState();
     _runAnalysis();
     _loadPatients();
+    _loadPresets();
   }
 
   @override
@@ -75,6 +78,13 @@ class _XrayInfoState extends State<XrayInfo> {
     } catch (e) {
       if (mounted) setState(() { _errorMessage = e.toString(); _isLoading = false; });
     }
+  }
+
+  Future<void> _loadPresets() async {
+    try {
+      final presets = await _db.getPresets();
+      if (mounted) setState(() => _presets = presets);
+    } catch (_) {}
   }
 
   Future<void> _loadPatients() async {
@@ -736,8 +746,8 @@ class _XrayInfoState extends State<XrayInfo> {
                                           context: context,
                                           isScrollControlled: true,
                                           backgroundColor: Colors.transparent,
-                                          builder: (_) =>
-                                              const PresetPickerSheet(),
+                                          builder: (_) => PresetPickerSheet(
+                                              presets: _presets),
                                         );
                                         if (body != null) {
                                           _interpretationCtrl.text = body;
