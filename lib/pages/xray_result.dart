@@ -93,6 +93,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
   void _showShareOptions() async {
     final patientDoc = await _db.getPatientById(widget.patientId);
     final patientEmail = patientDoc.email;
+
     if (!mounted) return;
 
     showModalBottomSheet(
@@ -468,11 +469,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
             icon: const Icon(Icons.share_outlined, color: white),
             tooltip: 'Share results',
             onPressed: _isLoading ? null : _showShareOptions,
-          ),
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: white),
-            onPressed: () {},
-          ),
+          )
         ],
       );
 
@@ -548,7 +545,6 @@ class _XrayResultPageState extends State<XrayResultPage> {
     final dateStr = _scan != null
         ? DateFormat('MMMM d, y').format(_scan!.createdAt)
         : '';
-
     return Scaffold(
       backgroundColor: white,
       appBar: _buildAppBar(),
