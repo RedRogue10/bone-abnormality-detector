@@ -4,6 +4,7 @@ import 'package:bone_abnormality_detector/main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 // SERVICES
 import 'package:bone_abnormality_detector/services/auth.dart';
@@ -15,6 +16,7 @@ import 'info_screen.dart';
 import '../pages/doctor_page.dart';
 import '../pages/camera_capture.dart';
 import '../pages/xray_result.dart';
+import 'mobile_only_page.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -32,24 +34,6 @@ class _DashboardPageState extends State<DashboardPage> {
   static const Color white = Colors.white;
   static const Color cameraRing = Color(0xFFB8D8D8);
   static const Color cameraIcon = Color(0xFF001F54);
-
-  final List<Map<String, dynamic>> recentPatients = const [
-    {
-      'name': 'Juan de la Cruz Jr.',
-      'details': '33 years, Male',
-      'color': Color(0xFFD19527),
-    },
-    {
-      'name': 'Juan de la Cruz Jr.',
-      'details': '33 years, Male',
-      'color': Color(0xFFD19527),
-    },
-    {
-      'name': 'Juan de la Cruz Jr.',
-      'details': '33 years, Male',
-      'color': Color(0xFFD19527),
-    },
-  ];
 
   @override
   void initState() {
@@ -445,7 +429,13 @@ class _DashboardPageState extends State<DashboardPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => const CameraCapturePage(patientId: '1'),
+            builder: (context) {
+              if (kIsWeb) {
+                return const MobileOnlyPage();
+              } else {
+                return const CameraCapturePage(patientId: '1');
+              }
+            },
           ),
         );
       },
@@ -520,7 +510,13 @@ class _DashboardPageState extends State<DashboardPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const CameraCapturePage(patientId: '1'),
+                    builder: (context) {
+                      if (kIsWeb) {
+                        return const MobileOnlyPage();
+                      } else {
+                        return const CameraCapturePage(patientId: '1');
+                      }
+                    },
                   ),
                 );
               },

@@ -46,35 +46,35 @@ class _EditPatientPageState extends State<EditPatientPage> {
   }
 
   Future<void> _loadPatient() async {
-  print('Loading patient with ID: ${widget.patientId}');
-  try {
-    _patient = await DatabaseService().getPatientById(widget.patientId);
+    print('Loading patient with ID: ${widget.patientId}');
+    try {
+      _patient = await DatabaseService().getPatientById(widget.patientId);
 
-    _firstNameCtrl.text = _patient!.firstName;
-    _lastNameCtrl.text = _patient!.lastName;
-    _middleNameCtrl.text = _patient!.middleName ?? '';
-    selectedGender = _patient!.sex;
-    _dobCtrl.text = _formatDate(_patient!.birthDate);
-    _contactCtrl.text = _patient!.contactNumber ?? '';
-    _emailCtrl.text = _patient!.email ?? '';
+      _firstNameCtrl.text = _patient!.firstName;
+      _lastNameCtrl.text = _patient!.lastName;
+      _middleNameCtrl.text = _patient!.middleName ?? '';
+      selectedGender = _patient!.sex;
+      _dobCtrl.text = _formatDate(_patient!.birthDate);
+      _contactCtrl.text = _patient!.contactNumber ?? '';
+      _emailCtrl.text = _patient!.email ?? '';
 
-    _addressCtrl.text = _patient!.address ?? '';
-    _ecNameCtrl.text = _patient!.emergencyContact?.name ?? '';
-    _ecContactCtrl.text = _patient!.emergencyContact?.contactNumber ?? '';
-    _ecRelationshipCtrl.text = _patient!.emergencyContact?.relationship ?? '';
+      _addressCtrl.text = _patient!.address ?? '';
+      _ecNameCtrl.text = _patient!.emergencyContact?.name ?? '';
+      _ecContactCtrl.text = _patient!.emergencyContact?.contactNumber ?? '';
+      _ecRelationshipCtrl.text = _patient!.emergencyContact?.relationship ?? '';
 
-    _historyRecords = List.from(_patient!.historyRecords);
+      _historyRecords = List.from(_patient!.historyRecords);
 
-    setState(() => _isLoading = false);
-  } catch (e) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load patient: $e')),
-      );
-      Navigator.pop(context);
+      setState(() => _isLoading = false);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load patient: $e')));
+        Navigator.pop(context);
+      }
     }
   }
-}
 
   @override
   void dispose() {
@@ -200,6 +200,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
             DatabaseService().deletePatient(widget.patientId);
             Navigator.pop(context);
             Navigator.pop(context);
+            Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(backgroundColor: _deleteRed),
           child: Text(
@@ -240,7 +241,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
   }
 
   Widget _buildGenderField() {
-    const Color darkNavy    = Color(0xFF0B2545);
+    const Color darkNavy = Color(0xFF0B2545);
     const Color primaryBlue = Color(0xFF1A73E9);
 
     return Padding(
@@ -319,10 +320,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
         context: context,
         title: Text(
           'Edit Patient Info',
-          style: GoogleFonts.oswald(
-            color: Colors.white,
-            fontSize: 20,
-          ),
+          style: GoogleFonts.oswald(color: Colors.white, fontSize: 20),
         ),
         actionLabel: 'UPDATE',
         onAction: _isSaving ? null : _save,

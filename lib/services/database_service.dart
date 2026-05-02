@@ -112,9 +112,47 @@ class DatabaseService {
 
   Future<void> deletePatient(String patientId) async {
     try {
+      final scansSnapshot = await _getPatientCollectionRef
+          .doc(patientId)
+          .collection('scans')
+          .get();
+
+      for (var scanDoc in scansSnapshot.docs) {
+        final data = scanDoc.data();
+
+        // Delete the Xray image from Storage
+        if (data['imageUrl'] != null) {
+          await _deleteFileFromUrl(data['imageUrl']);
+        }
+
+        // Delete AI-generated images
+        if (data['result'] != null &&
+            data['result']['generatedImageUrls'] != null) {
+          List<dynamic> aiUrls = data['result']['generatedImageUrls'];
+          for (String url in aiUrls) {
+            await _deleteFileFromUrl(url);
+          }
+        }
+
+        // Delete the scan document
+        await scanDoc.reference.delete();
+      }
+
+      // Deelete the patient document
       await _getPatientCollectionRef.doc(patientId).delete();
+
+      print("Patient and all associated data deleted successfully.");
     } catch (e) {
       throw Exception('Failed to delete patient: $e');
+    }
+  }
+
+  // Helper to delete file from Storage using URL
+  Future<void> _deleteFileFromUrl(String url) async {
+    try {
+      await FirebaseStorage.instance.refFromURL(url).delete();
+    } catch (e) {
+      print("Photo was already deleted: $e");
     }
   }
 
@@ -200,13 +238,37 @@ class DatabaseService {
 
   Future<void> deleteXrayScan(String patientId, String scanId) async {
     try {
-      await _getPatientCollectionRef
+      // Get the scan document to find the image URLs
+      final docRef = _getPatientCollectionRef
           .doc(patientId)
           .collection('scans')
-          .doc(scanId)
-          .delete();
+          .doc(scanId);
+
+      final snapshot = await docRef.get();
+
+      if (snapshot.exists) {
+        final data = snapshot.data();
+
+        // Delete the main X-ray image from Storage
+        if (data != null && data['imageUrl'] != null) {
+          await _deleteFileFromUrl(data['imageUrl']);
+        }
+
+        // Delete AI generated images
+        if (data != null &&
+            data['result'] != null &&
+            data['result']['generatedImageUrls'] != null) {
+          List<dynamic> aiUrls = data['result']['generatedImageUrls'];
+          for (String url in aiUrls) {
+            await _deleteFileFromUrl(url);
+          }
+        }
+      }
+
+      // delete the scan document
+      await docRef.delete();
     } catch (e) {
-      throw Exception('Failed to delete x-ray scan: $e');
+      throw Exception('Failed to delete x-ray scan and associated images: $e');
     }
   }
 
@@ -459,7 +521,7 @@ class DatabaseService {
     final updatedResult = resultData.copyWith(generatedImageUrls: imageUrls);
 
     // save to Firestore
-    updateXrayScanResult(
+    await updateXrayScanResult(
       patientId: patientId,
       scanId: scanId,
       result: updatedResult,

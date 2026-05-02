@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'edit_patient.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+
+// SERVICES
 import '../services/database_service.dart';
+
+// MODELS
 import '../models/patient.dart';
+
+// PAGES
+import 'edit_patient.dart';
 import '../pages/xray_history.dart';
 import '../pages/camera_capture.dart';
+import 'mobile_only_page.dart';
 
 class PatientInfoScreen extends StatefulWidget {
   final String patientId;
@@ -131,7 +139,13 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => CameraCapturePage(patientId: widget.patientId),
+              builder: (context) {
+                if (kIsWeb) {
+                  return const MobileOnlyPage();
+                } else {
+                  return const CameraCapturePage(patientId: '1');
+                }
+              },
             ),
           ).then((_) => _loadPatient());
         },
@@ -154,17 +168,10 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
         ),
         title: Text(
           'PATIENT INFORMATION',
-          style: GoogleFonts.oswald(
-            color: white,
-            fontSize: 20,
-          ),
+          style: GoogleFonts.oswald(color: white, fontSize: 20),
         ),
         centerTitle: true,
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 12),
-          ),
-        ],
+        actions: [Container(margin: const EdgeInsets.only(right: 12))],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -251,235 +258,230 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
               ),
               const SizedBox(height: 24),
               Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
 
-                  child: Column(
-                    children: [
-                      // -------------------- Personal Information --------------------
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Personal Information',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: primaryBlue,
-                            letterSpacing: 0.5,
-                          ),
+                child: Column(
+                  children: [
+                    // -------------------- Personal Information --------------------
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Personal Information',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: primaryBlue,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Column(
-                        children: [
-                          _buildInfoRow('Name', fullName),
-                          _buildInfoRow('Age', age),
-                          _buildInfoRow('Sex', _patient?.sex ?? '-'),
-                          _buildInfoRow(
-                            'Birthdate',
-                            _patient != null
-                                ? '${_patient!.birthDate.month}/${_patient!.birthDate.day}/${_patient!.birthDate.year}'
-                                : '-',
-                          ),
-                          _buildInfoRow(
-                            'Contact Number',
-                            _patient?.contactNumber ?? '-',
-                          ),
-                          _buildInfoRow(
-                            'Email',
-                            _patient?.email ?? '-', 
-                          ),
-                          _buildInfoRow('Address', _patient?.address ?? '-'),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    Column(
+                      children: [
+                        _buildInfoRow('Name', fullName),
+                        _buildInfoRow('Age', age),
+                        _buildInfoRow('Sex', _patient?.sex ?? '-'),
+                        _buildInfoRow(
+                          'Birthdate',
+                          _patient != null
+                              ? '${_patient!.birthDate.month}/${_patient!.birthDate.day}/${_patient!.birthDate.year}'
+                              : '-',
+                        ),
+                        _buildInfoRow(
+                          'Contact Number',
+                          _patient?.contactNumber ?? '-',
+                        ),
+                        _buildInfoRow('Email', _patient?.email ?? '-'),
+                        _buildInfoRow('Address', _patient?.address ?? '-'),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
-                      // -------------------- Emergency Contact --------------------
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Emergency Contact',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: primaryBlue,
-                            letterSpacing: 0.5,
-                          ),
+                    // -------------------- Emergency Contact --------------------
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Emergency Contact',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: primaryBlue,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Column(
-                        children: [
-                          _buildInfoRow(
-                            'Name',
-                            _patient?.emergencyContact?.name ?? '-',
-                          ),
-                          _buildInfoRow(
-                            'Contact Number',
-                            _patient?.emergencyContact?.contactNumber ?? '-',
-                          ),
-                          _buildInfoRow(
-                            'Relationship',
-                            _patient?.emergencyContact?.relationship ?? '-',
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 32),
+                    ),
+                    const SizedBox(height: 16),
+                    Column(
+                      children: [
+                        _buildInfoRow(
+                          'Name',
+                          _patient?.emergencyContact?.name ?? '-',
+                        ),
+                        _buildInfoRow(
+                          'Contact Number',
+                          _patient?.emergencyContact?.contactNumber ?? '-',
+                        ),
+                        _buildInfoRow(
+                          'Relationship',
+                          _patient?.emergencyContact?.relationship ?? '-',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
 
-                      // -------------------- Patient History --------------------
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Patient History',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: primaryBlue,
-                            letterSpacing: 0.5,
-                          ),
+                    // -------------------- Patient History --------------------
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Patient History',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: primaryBlue,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: IntrinsicHeight(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 2,
-                                decoration: BoxDecoration(
-                                  color: primaryBlue,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
+                    ),
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 2,
+                              decoration: BoxDecoration(
+                                color: primaryBlue,
+                                borderRadius: BorderRadius.circular(2),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (_patient?.historyRecords.isEmpty ??
-                                        true)
-                                      Text(
-                                        'No patient history records available.',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          fontStyle: FontStyle.italic,
-                                          color: grey,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_patient?.historyRecords.isEmpty ?? true)
+                                    Text(
+                                      'No patient history records available.',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 14,
+                                        fontStyle: FontStyle.italic,
+                                        color: grey,
+                                      ),
+                                    )
+                                  else
+                                    ..._patient!.historyRecords.map(
+                                      (record) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 16,
                                         ),
-                                      )
-                                    else
-                                      ..._patient!.historyRecords.map(
-                                        (record) => Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 16,
-                                          ),
-                                          child: _buildHistoryEntry(
-                                            date: record.date,
-                                            description: record.note,
-                                          ),
+                                        child: _buildHistoryEntry(
+                                          date: record.date,
+                                          description: record.note,
                                         ),
                                       ),
-                                  ],
-                                ),
+                                    ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
+                    ),
+                    const SizedBox(height: 16),
 
-                      // -------------------- Xray History --------------------
-                      _hasXrayHistory
-                          ? Material(
-                              elevation: 4,
+                    // -------------------- Xray History --------------------
+                    _hasXrayHistory
+                        ? Material(
+                            elevation: 4,
+                            borderRadius: BorderRadius.circular(12),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => XrayHistory(
+                                      patientId: widget.patientId,
+                                    ),
+                                  ),
+                                );
+                              },
                               borderRadius: BorderRadius.circular(12),
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => XrayHistory(
-                                        patientId: widget.patientId,
-                                      ),
-                                    ),
-                                  );
-                                },
-                                borderRadius: BorderRadius.circular(12),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 35,
-                                    vertical: 30,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    image: DecorationImage(
-                                      image: AssetImage(
-                                        'assets/images/xray_background.png',
-                                      ),
-                                      fit: BoxFit.cover,
-                                      colorFilter: ColorFilter.mode(
-                                        Colors.black.withOpacity(0.3),
-                                        BlendMode.darken,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'View Xray Results',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 16,
-                                          color: white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Icon(
-                                        Icons.arrow_forward,
-                                        color: white,
-                                        size: 24,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            )
-                          : ElevatedButton(
-                              onPressed: null, // Disabled
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: grey,
-                                foregroundColor: white,
+                              child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 35,
                                   vertical: 30,
                                 ),
-                                shape: RoundedRectangleBorder(
+                                decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
-                                ),
-                                elevation: 4,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'No Xray Results Available',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16,
-                                      color: grey,
-                                      fontWeight: FontWeight.bold,
+                                  image: DecorationImage(
+                                    image: AssetImage(
+                                      'assets/images/xray_background.png',
+                                    ),
+                                    fit: BoxFit.cover,
+                                    colorFilter: ColorFilter.mode(
+                                      Colors.black.withOpacity(0.3),
+                                      BlendMode.darken,
                                     ),
                                   ),
-                                ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'View Xray Results',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        color: white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Icon(
+                                      Icons.arrow_forward,
+                                      color: white,
+                                      size: 24,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                    ],
-                  ),
+                          )
+                        : ElevatedButton(
+                            onPressed: null, // Disabled
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: grey,
+                              foregroundColor: white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 35,
+                                vertical: 30,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 4,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'No Xray Results Available',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    color: grey,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
