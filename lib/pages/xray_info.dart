@@ -37,8 +37,7 @@ class _XrayInfoState extends State<XrayInfo> {
 
   final ModelProcessor _processor = ModelProcessor();
   final DatabaseService _db = DatabaseService();
-  final TextEditingController _searchCtrl = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
+  final TextEditingController _interpretationCtrl = TextEditingController();
 
   ScanResult? _result;
   Uint8List? _camImage;
@@ -48,8 +47,6 @@ class _XrayInfoState extends State<XrayInfo> {
 
   Patient? _selectedPatient;
   List<Patient> _allPatients = [];
-  List<Patient> _searchResults = [];
-  bool _showDropdown = false;
   List<InterpretationPreset> _presets = [];
 
   int _currentImageIndex = 0;
@@ -69,6 +66,7 @@ class _XrayInfoState extends State<XrayInfo> {
     _interpretationCtrl.dispose();
     super.dispose();
   }
+
 
   Future<void> _runAnalysis() async {
     try {
@@ -111,32 +109,7 @@ class _XrayInfoState extends State<XrayInfo> {
     } catch (_) {}
   }
 
-  void _onSearchChanged() {
-    final q = _searchCtrl.text.trim().toLowerCase();
-    if (q.isEmpty) {
-      setState(() {
-        _searchResults = [];
-        _showDropdown = false;
-      });
-      return;
-    }
-    setState(() {
-      _searchResults = _allPatients
-          .where((p) => p.fullName.toLowerCase().contains(q))
-          .take(6)
-          .toList();
-      _showDropdown = true;
-    });
-  }
-
-  void _selectPatient(Patient p) {
-    setState(() {
-      _selectedPatient = p;
-      _showDropdown = false;
-      _searchCtrl.clear();
-    });
-    _searchFocus.unfocus();
-  }
+  void _selectPatient(Patient p) => setState(() => _selectedPatient = p);
 
   void _clearPatient() => setState(() => _selectedPatient = null);
 
@@ -365,115 +338,6 @@ class _XrayInfoState extends State<XrayInfo> {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Assign Patient',
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.black54,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: _searchCtrl,
-          focusNode: _searchFocus,
-          decoration: InputDecoration(
-            hintText: 'Search patient by name…',
-            hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.black38),
-            prefixIcon: const Icon(
-              Icons.search,
-              size: 20,
-              color: Colors.black45,
-            ),
-            filled: true,
-            fillColor: fieldBg,
-            contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-          ),
-          style: GoogleFonts.poppins(fontSize: 13),
-        ),
-        if (_showDropdown && _searchResults.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 2),
-            decoration: BoxDecoration(
-              color: white,
-              border: Border.all(color: Colors.black12),
-              borderRadius: BorderRadius.circular(8),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Column(
-              children: _searchResults.map((p) {
-                return InkWell(
-                  onTap: () => _selectPatient(p),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: primaryBlue,
-                          child: Text(
-                            p.initials,
-                            style: const TextStyle(
-                              color: white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                p.fullName,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                '${p.age} yrs · ${p.sex}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          )
-        else if (_showDropdown && _searchResults.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'No patients found.',
-              style: GoogleFonts.poppins(fontSize: 13, color: Colors.black45),
-            ),
-          ),
-      ],
     return GestureDetector(
       onTap: _showPatientPicker,
       child: Container(
@@ -489,8 +353,7 @@ class _XrayInfoState extends State<XrayInfo> {
                 color: Colors.black45, size: 22),
             const SizedBox(width: 12),
             Text('Select Contact',
-                style: GoogleFonts.poppins(
-                    fontSize: 14, color: Colors.black45)),
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black45)),
             const Spacer(),
             const Icon(Icons.chevron_right, color: Colors.black38, size: 20),
           ],
