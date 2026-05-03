@@ -92,10 +92,10 @@ class _XrayHistoryState extends State<XrayHistory> {
 
                 const SizedBox(width: 14),
 
-                // Details 
+                // Details
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -108,15 +108,17 @@ class _XrayHistoryState extends State<XrayHistory> {
                             color: primaryBlue,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           formatDate(scan.createdAt),
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             color: Colors.black87,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
                           "Scan ID: ${scan.id}",
                           style: GoogleFonts.poppins(
@@ -124,6 +126,8 @@ class _XrayHistoryState extends State<XrayHistory> {
                             fontStyle: FontStyle.italic,
                             color: grey,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -160,10 +164,7 @@ class _XrayHistoryState extends State<XrayHistory> {
         ),
         title: Text(
           'X-RAY HISTORY',
-          style: GoogleFonts.oswald(
-            color: white,
-            fontSize: 20,
-          ),
+          style: GoogleFonts.oswald(color: white, fontSize: 20),
         ),
         centerTitle: true,
         actions: [
@@ -187,7 +188,7 @@ class _XrayHistoryState extends State<XrayHistory> {
       ),
       body: Column(
         children: [
-          // ── Navy Patient Header 
+          // ── Navy Patient Header
           Container(
             width: double.infinity,
             color: darkNavy,
@@ -238,12 +239,10 @@ class _XrayHistoryState extends State<XrayHistory> {
             ),
           ),
 
-          // Scan List 
+          // Scan List
           Expanded(
             child: StreamBuilder<List<XrayScan>>(
-              stream: DatabaseService().getPatientScansStream(
-                widget.patientId,
-              ),
+              stream: DatabaseService().getPatientScansStream(widget.patientId),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -264,10 +263,7 @@ class _XrayHistoryState extends State<XrayHistory> {
                         const SizedBox(height: 12),
                         Text(
                           'No scans found',
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            color: grey,
-                          ),
+                          style: GoogleFonts.poppins(fontSize: 15, color: grey),
                         ),
                       ],
                     ),
@@ -277,8 +273,7 @@ class _XrayHistoryState extends State<XrayHistory> {
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   itemCount: scans.length,
-                  itemBuilder: (context, index) =>
-                      _buildScanCard(scans[index]),
+                  itemBuilder: (context, index) => _buildScanCard(scans[index]),
                 );
               },
             ),
