@@ -1,20 +1,17 @@
-import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' show ImageFilter;
 
-import 'package:flutter/foundation.dart'
-    show consolidateHttpClientResponseBytes;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import '../models/interpretation_preset.dart';
 import '../models/scan_result.dart';
 import '../models/xray_scan.dart';
-
-import 'package:flutter/services.dart';
 import '../services/database_service.dart';
 import '../services/sharing_service.dart';
 import '../services/email_service.dart';
+import '../widgets/preset_picker_sheet.dart';
 
 class XrayResultPage extends StatefulWidget {
   final String patientId;
@@ -36,48 +33,45 @@ class _XrayResultPageState extends State<XrayResultPage> {
   static const Color white = Colors.white;
 
   final DatabaseService _db = DatabaseService();
-  final SharingService _ss = SharingService();
+  final TextEditingController _interpretationCtrl = TextEditingController();
 
   XrayScan? _scan;
   ScanResult? _result;
-  Uint8List? _camImageBytes;
-  String? _errorMessage;
-  bool _isLoading = true;
+  String?     _camImageUrl;
+  String?     _errorMessage;
+  bool        _isLoading  = true;
+  bool        _savingNote = false;
+  List<InterpretationPreset> _presets = [];
 
   int _currentImageIndex = 0;
-  static const int _imageCount = 2;
 
   @override
   void initState() {
     super.initState();
     _loadScan();
+    _loadPresets();
+  }
+
+  @override
+  void dispose() {
+    _interpretationCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadScan() async {
     try {
       final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
-      Uint8List? camBytes;
-      final camUrl = scan.result?.generatedImageUrls.isNotEmpty == true
-          ? scan.result!.generatedImageUrls.first
-          : null;
-      if (camUrl != null) {
-        try {
-          final request = await HttpClient().getUrl(Uri.parse(camUrl));
-          final response = await request.close();
-          camBytes = await consolidateHttpClientResponseBytes(response);
-        } catch (_) {}
-      }
       if (mounted) {
-        {
-          setState(() {
-            _scan = scan;
-
-            _result = scan.result;
-            _camImageBytes = camBytes;
-
-            _isLoading = false;
-          });
-        }
+        setState(() {
+          _scan = scan;
+          _result = scan.result;
+          _camImageUrl = scan.result?.generatedImageUrls.isNotEmpty == true
+              ? scan.result!.generatedImageUrls.first
+              : null;
+          if (_camImageUrl == null) _currentImageIndex = 0;
+          _isLoading = false;
+        });
+        _interpretationCtrl.text = scan.result?.interpretation ?? '';
       }
     } catch (e) {
       if (mounted) {
@@ -89,10 +83,18 @@ class _XrayResultPageState extends State<XrayResultPage> {
     }
   }
 
+  Future<void> _loadPresets() async {
+    try {
+      final presets = await _db.getPresets();
+      if (mounted) setState(() => _presets = presets);
+    } catch (_) {}
+  }
+
   void _showShareOptions() async {
     final patientDoc = await _db.getPatientById(widget.patientId);
     final patientEmail = patientDoc.email;
-    print(patientEmail);
+
+    if (!mounted) return;
 
     showModalBottomSheet(
       context: context,
@@ -101,26 +103,21 @@ class _XrayResultPageState extends State<XrayResultPage> {
       ),
       builder: (_) {
         final hasEmail = patientEmail != null && patientEmail.trim().isNotEmpty;
-
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // SEND TO EMAIL OPTION
               ListTile(
                 enabled: hasEmail,
-                leading: Icon(
-                  Icons.email_outlined,
-                  color: hasEmail ? Colors.black87 : Colors.grey,
-                ),
+                leading: Icon(Icons.email_outlined,
+                    color: hasEmail ? Colors.black87 : Colors.grey),
                 title: Text(
                   hasEmail
                       ? 'Send to patient email'
                       : 'No email available for this patient',
                   style: TextStyle(
-                    color: hasEmail ? Colors.black87 : Colors.grey,
-                  ),
+                      color: hasEmail ? Colors.black87 : Colors.grey),
                 ),
                 onTap: hasEmail
                     ? () {
@@ -129,8 +126,6 @@ class _XrayResultPageState extends State<XrayResultPage> {
                       }
                     : null,
               ),
-
-              // COPY LINK OPTION
               ListTile(
                 leading: const Icon(Icons.link),
                 title: const Text('Copy link to clipboard'),
@@ -147,31 +142,59 @@ class _XrayResultPageState extends State<XrayResultPage> {
   }
 
   void _copyPublicLink() async {
-    final link = await _ss.generateSecureLink(
+    final link = await SharingService().generateSecureLink(
       patientId: widget.patientId,
       scanId: widget.scanId,
     );
     await Clipboard.setData(ClipboardData(text: link));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
   }
 
   void _sendEmailToPatient(String email) async {
     try {
-      final link = await _ss.generateSecureLink(
+      final link = await SharingService().generateSecureLink(
         patientId: widget.patientId,
         scanId: widget.scanId,
       );
       await EmailService().sendEmailLink(email, link);
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Email sent to $email')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Email sent to $email')));
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to send email: $e')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to send email: $e')));
+    }
+  }
+
+  Future<void> _saveInterpretation() async {
+    final text = _interpretationCtrl.text.trim();
+    if (_result == null) return;
+    setState(() => _savingNote = true);
+    try {
+      await _db.updateInterpretation(
+        patientId: widget.patientId,
+        scanId: widget.scanId,
+        interpretation: text,
+      );
+      if (mounted) {
+        setState(() {
+          _result = _result!.copyWith(interpretation: text);
+          _savingNote = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Interpretation saved.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _savingNote = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
     }
   }
 
@@ -227,8 +250,18 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Widget _buildImageForIndex(int index) {
     if (index == 0) return _buildNetworkImage();
 
-    if (_camImageBytes != null) {
-      return Image.memory(_camImageBytes!, fit: BoxFit.contain);
+    if (_camImageUrl != null) {
+      return Image.network(
+        _camImageUrl!,
+        fit: BoxFit.contain,
+        loadingBuilder: (context, child, progress) => progress == null
+            ? child
+            : const Center(
+                child: CircularProgressIndicator(color: Colors.white)),
+        errorBuilder: (context, error, stack) =>
+            const Icon(Icons.broken_image_outlined,
+                color: Colors.white38, size: 64),
+      );
     }
 
     return const Center(
@@ -339,29 +372,107 @@ class _XrayResultPageState extends State<XrayResultPage> {
             topPrediction.bonePart.toUpperCase(),
             '${(topPrediction.confidence * 100).toStringAsFixed(1)}% Confidence',
           ),
+        const SizedBox(height: 28),
+        const Divider(),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Text('INTERPRETATION',
+                style: GoogleFonts.oswald(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    letterSpacing: 1.2)),
+            const Spacer(),
+            TextButton.icon(
+              icon: const Icon(Icons.format_list_bulleted, size: 15),
+              label: Text('Presets', style: GoogleFonts.poppins(fontSize: 12)),
+              style: TextButton.styleFrom(
+                  foregroundColor: primaryBlue,
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+              onPressed: () async {
+                final body = await showModalBottomSheet<String>(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => PresetPickerSheet(presets: _presets),
+                );
+                await _loadPresets();
+                if (body != null) _interpretationCtrl.text = body;
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _interpretationCtrl,
+          maxLines: 5,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: InputDecoration(
+            hintText: 'Add clinical notes or interpretation…',
+            hintStyle:
+                GoogleFonts.poppins(fontSize: 13, color: Colors.black38),
+            filled: true,
+            fillColor: const Color(0xFFF0F0F0),
+            contentPadding: const EdgeInsets.all(12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide.none),
+          ),
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton(
+            onPressed: _savingNote ? null : _saveInterpretation,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: darkNavy,
+              foregroundColor: white,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
+            ),
+            child: _savingNote
+                ? const SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(
+                        color: Colors.white, strokeWidth: 2))
+                : Text('Save Note',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+          ),
+        ),
       ],
     );
   }
 
   PreferredSizeWidget _buildAppBar() => AppBar(
-    backgroundColor: darkNavy,
-    elevation: 0,
-    leading: IconButton(
-      icon: const Icon(Icons.chevron_left, color: white, size: 28),
-      onPressed: () => Navigator.pop(context),
-    ),
-    title: Text(
-      'RESULTS',
-      style: GoogleFonts.oswald(color: white, fontSize: 20, letterSpacing: 1.5),
-    ),
-    centerTitle: true,
-    actions: [
-      IconButton(
-        icon: const Icon(Icons.ios_share, color: white),
-        onPressed: _showShareOptions,
-      ),
-    ],
-  );
+        backgroundColor: darkNavy,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left, color: white, size: 28),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text('RESULTS',
+            style: GoogleFonts.oswald(
+                color: white,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                letterSpacing: 2)),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: white),
+            tooltip: 'Share results',
+            onPressed: _isLoading ? null : _showShareOptions,
+          )
+        ],
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -435,7 +546,6 @@ class _XrayResultPageState extends State<XrayResultPage> {
     final dateStr = _scan != null
         ? DateFormat('MMMM d, y').format(_scan!.createdAt)
         : '';
-
     return Scaffold(
       backgroundColor: white,
       appBar: _buildAppBar(),
@@ -486,7 +596,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ...List.generate(_imageCount, (i) {
+                ...List.generate(_camImageUrl != null ? 2 : 1, (i) {
                   final active = i == _currentImageIndex;
                   return GestureDetector(
                     onTap: () => setState(() => _currentImageIndex = i),
@@ -504,7 +614,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () {
-                    if (_currentImageIndex < _imageCount - 1) {
+                    if (_camImageUrl != null && _currentImageIndex < 1) {
                       setState(() => _currentImageIndex++);
                     }
                   },
