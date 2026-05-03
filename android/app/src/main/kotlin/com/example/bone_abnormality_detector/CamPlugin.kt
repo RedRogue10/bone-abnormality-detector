@@ -15,6 +15,7 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
+
 import kotlin.math.sqrt
 
 class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
@@ -124,29 +125,38 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         }
         Log.d(TAG, "Feature map: [${featH}×${featW}×${featC}]")
 
-        // Allocate ByteBuffer outputs — compatible with any tensor shape
-        val outPredBuf = ByteBuffer
-            .allocateDirect(predShape.fold(4) { acc, d -> acc * d })
-            .order(ByteOrder.nativeOrder())
-        val outFeatBuf = ByteBuffer
-            .allocateDirect(featShape.fold(4) { acc, d -> acc * d })
-            .order(ByteOrder.nativeOrder())
+        // Allocate typed-array outputs — TFLite on Android requires typed arrays for outputs
+        val predArr: Any = if (predShape.size == 1)
+            FloatArray(predShape[0])
+        else
+            Array(predShape[0]) { FloatArray(predShape[1]) }
+
+        val featArr: Any = if (featShape.size == 3)
+            Array(featH) { Array(featW) { FloatArray(featC) } }
+        else
+            Array(1) { Array(featH) { Array(featW) { FloatArray(featC) } } }
 
         val outputs = HashMap<Int, Any>()
-        outputs[predIdx] = outPredBuf
-        outputs[featIdx] = outFeatBuf
+        outputs[predIdx] = predArr
+        outputs[featIdx] = featArr
         interpreter.runForMultipleInputsOutputs(arrayOf<Any>(inputBuf), outputs)
         interpreter.close()
 
-        // Extract predictions — last dim is num_classes regardless of rank
-        outPredBuf.rewind()
-        val numClasses = predShape.last()
-        val probs = FloatArray(numClasses) { outPredBuf.float }
+        // Extract predictions — unwrap batch dim if rank 2
+        val probs: FloatArray = if (predShape.size == 1)
+            predArr as FloatArray
+        else
+            (predArr as Array<FloatArray>)[0]
         Log.d(TAG, "Probs: ${probs.toList()}")
 
-        // Extract feature map flat array — indexing: y*W*C + x*C + c (batch=1 → same for rank 3/4)
-        outFeatBuf.rewind()
-        val featFlat = FloatArray(featH * featW * featC) { outFeatBuf.float }
+        // Build accessor for feature map — handles rank 3 [H,W,C] and rank 4 [1,H,W,C]
+        val feat: (Int, Int, Int) -> Float = if (featShape.size == 3) {
+            val f = featArr as Array<Array<FloatArray>>
+            { y, x, c -> f[y][x][c] }
+        } else {
+            val f = (featArr as Array<Array<Array<FloatArray>>>)[0]
+            { y, x, c -> f[y][x][c] }
+        }
 
         // Eigen-CAM: power iteration to find dominant activation direction,
         // then project the feature map onto it for the spatial heatmap.
@@ -156,14 +166,14 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             val mv = FloatArray(rows) { r ->
                 val y = r / featW; val x = r % featW
                 var s = 0f
-                for (c in 0 until featC) s += featFlat[y * featW * featC + x * featC + c] * v[c]
+                for (c in 0 until featC) s += feat(y, x, c) * v[c]
                 s
             }
             val vNew = FloatArray(featC) { c ->
                 var s = 0f
                 for (r in 0 until rows) {
                     val y = r / featW; val x = r % featW
-                    s += featFlat[y * featW * featC + x * featC + c] * mv[r]
+                    s += feat(y, x, c) * mv[r]
                 }
                 s
             }
@@ -175,7 +185,7 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         val camGrid = Array(featH) { y ->
             FloatArray(featW) { x ->
                 var s = 0f
-                for (c in 0 until featC) s += featFlat[y * featW * featC + x * featC + c] * v[c]
+                for (c in 0 until featC) s += feat(y, x, c) * v[c]
                 s
             }
         }

@@ -44,7 +44,6 @@ class _XrayResultPageState extends State<XrayResultPage> {
   List<InterpretationPreset> _presets = [];
 
   int _currentImageIndex = 0;
-  static const int _imageCount = 2;
 
   @override
   void initState() {
@@ -69,6 +68,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
           _camImageUrl = scan.result?.generatedImageUrls.isNotEmpty == true
               ? scan.result!.generatedImageUrls.first
               : null;
+          if (_camImageUrl == null) _currentImageIndex = 0;
           _isLoading = false;
         });
         _interpretationCtrl.text = scan.result?.interpretation ?? '';
@@ -596,7 +596,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                ...List.generate(_imageCount, (i) {
+                ...List.generate(_camImageUrl != null ? 2 : 1, (i) {
                   final active = i == _currentImageIndex;
                   return GestureDetector(
                     onTap: () => setState(() => _currentImageIndex = i),
@@ -614,7 +614,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () {
-                    if (_currentImageIndex < _imageCount - 1) {
+                    if (_camImageUrl != null && _currentImageIndex < 1) {
                       setState(() => _currentImageIndex++);
                     }
                   },
