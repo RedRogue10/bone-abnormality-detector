@@ -399,6 +399,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
                   backgroundColor: Colors.transparent,
                   builder: (_) => PresetPickerSheet(presets: _presets),
                 );
+                await _loadPresets();
                 if (body != null) _interpretationCtrl.text = body;
               },
             ),

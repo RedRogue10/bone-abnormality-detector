@@ -824,6 +824,7 @@ class _XrayInfoState extends State<XrayInfo> {
                                           builder: (_) => PresetPickerSheet(
                                               presets: _presets),
                                         );
+                                        await _loadPresets();
                                         if (body != null) {
                                           _interpretationCtrl.text = body;
                                         }

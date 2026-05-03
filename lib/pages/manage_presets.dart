@@ -36,6 +36,7 @@ class _ManagePresetsPageState extends State<ManagePresetsPage> {
     final titleCtrl = TextEditingController(text: preset?.title ?? '');
     final bodyCtrl  = TextEditingController(text: preset?.body  ?? '');
     bool saving = false;
+    bool saved  = false;
 
     await showModalBottomSheet(
       context: context,
@@ -44,7 +45,7 @@ class _ManagePresetsPageState extends State<ManagePresetsPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              bottom: MediaQuery.of(context).viewInsets.bottom),
           child: Container(
             decoration: const BoxDecoration(
               color: white,
@@ -148,8 +149,8 @@ class _ManagePresetsPageState extends State<ManagePresetsPage> {
                               } else {
                                 await _db.updatePreset(preset.id, title, body);
                               }
+                              saved = true;
                               if (ctx.mounted) Navigator.pop(ctx);
-                              await _load();
                             } catch (_) {
                               setSheetState(() => saving = false);
                             }
@@ -173,6 +174,7 @@ class _ManagePresetsPageState extends State<ManagePresetsPage> {
 
     titleCtrl.dispose();
     bodyCtrl.dispose();
+    if (saved) await _load();
   }
 
   Future<void> _delete(InterpretationPreset preset) async {
