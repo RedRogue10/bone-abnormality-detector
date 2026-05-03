@@ -67,10 +67,8 @@ class _XrayResultPageState extends State<XrayResultPage> {
   Future<void> _loadScan() async {
     try {
       final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
-      final patient =  await _db.getPatientById(widget.patientId);
       if (mounted) {
         setState(() {
-          _selectedPatient = patient;
           _scan = scan;
           _result = scan.result;
           _camImageUrl = scan.result?.generatedImageUrls.isNotEmpty == true
@@ -254,22 +252,19 @@ class _XrayResultPageState extends State<XrayResultPage> {
       ),
     );
   }
-Future<void> _loadPatients() async {
+  Future<void> _loadPatients() async {
     try {
       final patients = await _db.getPatients();
       if (!mounted) return;
       setState(() {
         _allPatients = patients;
-        if (widget.patientId != null) {
+        if (_selectedPatient == null) {
           final match = patients.where((p) => p.id == widget.patientId);
           if (match.isNotEmpty) _selectedPatient = match.first;
         }
       });
     } catch (_) {}
   }
-
-  void _selectPatient(Patient p) => setState(() => _selectedPatient = p);
-
 
   Future<void> _showPatientPicker() async {
     final picked = await showModalBottomSheet<Patient>(
@@ -278,6 +273,7 @@ Future<void> _loadPatients() async {
       backgroundColor: Colors.transparent,
       builder: (ctx) => _PatientPickerSheet(
         patients: _allPatients,
+        currentPatientId: widget.patientId,
         onAddPatient: () async {
           Navigator.pop(ctx);
           final added = await Navigator.push<bool>(
@@ -289,11 +285,38 @@ Future<void> _loadPatients() async {
             if (mounted) _showPatientPicker();
           }
         },
-      patientId: widget.patientId,
-      scanId: widget.scanId,
-     ),
+      ),
     );
-    if (picked != null) _selectPatient(picked);
+    if (picked == null) return;
+    await _reassignPatient(picked);
+  }
+
+  Future<void> _reassignPatient(Patient newPatient) async {
+    setState(() => _isLoading = true);
+    try {
+      final newScanId = await _db.reassignScan(
+        oldPatientId: widget.patientId,
+        scanId: widget.scanId,
+        newPatientId: newPatient.id,
+      );
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => XrayResultPage(
+            patientId: newPatient.id,
+            scanId: newScanId,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reassign: $e')),
+        );
+      }
+    }
   }
   Widget _buildImageForIndex(int index) {
     if (index == 0) return _buildNetworkImage();
@@ -761,17 +784,13 @@ Future<void> _loadPatients() async {
 
 class _PatientPickerSheet extends StatefulWidget {
   final List<Patient> patients;
-  final VoidCallback  onAddPatient;
-  
-  final String patientId;
-  
-  final String scanId;
+  final String currentPatientId;
+  final VoidCallback onAddPatient;
 
   const _PatientPickerSheet({
     required this.patients,
+    required this.currentPatientId,
     required this.onAddPatient,
-    required this.patientId,
-    required this.scanId
   });
 
   @override
@@ -782,17 +801,17 @@ class _PatientPickerSheetState extends State<_PatientPickerSheet> {
   static const Color darkNavy    = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
   static const Color white       = Colors.white;
-  
+
   final TextEditingController _search = TextEditingController();
   List<Patient> _filtered = [];
-  final DatabaseService _db = DatabaseService();
-  ScanResult? result;
+
   @override
   void initState() {
     super.initState();
-    _filtered = widget.patients;
+    _filtered = widget.patients
+        .where((p) => p.id != widget.currentPatientId)
+        .toList();
     _search.addListener(_onSearch);
-    _loadScan();
   }
 
   @override
@@ -801,27 +820,21 @@ class _PatientPickerSheetState extends State<_PatientPickerSheet> {
     _search.dispose();
     super.dispose();
   }
-  Future<void> _loadScan() async {
 
-      final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
-        setState(() {
-          result = scan.result;
-        });
-  }
   void _onSearch() {
     final q = _search.text.trim().toLowerCase();
+    final base = widget.patients
+        .where((p) => p.id != widget.currentPatientId)
+        .toList();
     setState(() {
       _filtered = q.isEmpty
-          ? widget.patients
-          : widget.patients
-              .where((p) => p.fullName.toLowerCase().contains(q))
-              .toList();
+          ? base
+          : base.where((p) => p.fullName.toLowerCase().contains(q)).toList();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    _loadScan();
     final bottomPad = MediaQuery.of(context).viewInsets.bottom;
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
@@ -938,14 +951,7 @@ class _PatientPickerSheetState extends State<_PatientPickerSheet> {
                               '${p.age} yrs · ${p.sex}',
                               style: GoogleFonts.poppins(
                                   fontSize: 12, color: Colors.black54)),
-                          onTap: () async {
-                            await _db.updateXrayScanResult(
-                              patientId: p.id,
-                              scanId: widget.scanId,
-                              result: result!,
-                            );
-                            Navigator.pop(context, p);
-                          },
+                          onTap: () => Navigator.pop(context, p),
                         )),
                 ],
               ),
