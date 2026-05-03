@@ -587,6 +587,41 @@ class _XrayResultPageState extends State<XrayResultPage> {
       ),
     );
   }
+  Future<void> _deleteScan() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete scan?',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Text(
+          'This will permanently delete the scan and all associated images.',
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await _db.deleteXrayScan(widget.patientId, widget.scanId);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e')),
+        );
+      }
+    }
+  }
+
   PreferredSizeWidget _buildAppBar() => AppBar(
         backgroundColor: darkNavy,
         elevation: 0,
@@ -606,7 +641,12 @@ class _XrayResultPageState extends State<XrayResultPage> {
             icon: const Icon(Icons.share_outlined, color: white),
             tooltip: 'Share results',
             onPressed: _isLoading ? null : _showShareOptions,
-          )
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: white),
+            tooltip: 'Delete scan',
+            onPressed: _isLoading ? null : _deleteScan,
+          ),
         ],
       );
 
