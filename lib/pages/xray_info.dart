@@ -223,13 +223,17 @@ class _XrayInfoState extends State<XrayInfo> {
                   Center(
                     child: GestureDetector(
                       onTap: () {},
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: const BoxDecoration(color: Colors.black),
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: ClipRect(
-                            child: _buildImageForIndex(_currentImageIndex),
+                      child: InteractiveViewer(
+                        minScale: 0.8,
+                        maxScale: 5.0,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: const BoxDecoration(color: Colors.black),
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: ClipRect(
+                              child: _buildImageForIndex(_currentImageIndex),
+                            ),
                           ),
                         ),
                       ),

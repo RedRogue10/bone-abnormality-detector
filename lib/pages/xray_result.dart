@@ -229,17 +229,21 @@ class _XrayResultPageState extends State<XrayResultPage> {
                 Center(
                   child: GestureDetector(
                     onTap: () {},
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: ClipRRect(
+                    child: InteractiveViewer(
+                      minScale: 0.8,
+                      maxScale: 5.0,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
                           borderRadius: BorderRadius.circular(16),
-                          child: _buildNetworkImage(),
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: _buildImageForIndex(_currentImageIndex),
+                          ),
                         ),
                       ),
                     ),
