@@ -10,6 +10,7 @@ import '../models/user.dart';
 import '../models/patient.dart';
 import '../models/xray_scan.dart';
 import '../models/scan_result.dart';
+import '../models/interpretation_preset.dart';
 
 const String DOCTOR_COLLECTION_REF = "users";
 
@@ -526,5 +527,59 @@ class DatabaseService {
       scanId: scanId,
       result: updatedResult,
     );
+  }
+
+  // ── Interpretation Presets ────────────────────────────────────────────────
+
+  CollectionReference<InterpretationPreset> get _presetsRef {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('No user logged in');
+    return _firestore
+        .collection(DOCTOR_COLLECTION_REF)
+        .doc(user.uid)
+        .collection('interpretation_presets')
+        .withConverter<InterpretationPreset>(
+          fromFirestore: (snap, _) =>
+              InterpretationPreset.fromMap(snap.data()!, snap.id),
+          toFirestore: (preset, _) => preset.toMap(),
+        );
+  }
+
+  Future<List<InterpretationPreset>> getPresets() async {
+    try {
+      final snap = await _presetsRef.orderBy('createdAt').get();
+      return snap.docs.map((d) => d.data()).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch presets: $e');
+    }
+  }
+
+  Future<void> addPreset(String title, String body) async {
+    try {
+      await _presetsRef.add(InterpretationPreset(
+        id:        '',
+        title:     title,
+        body:      body,
+        createdAt: DateTime.now(),
+      ));
+    } catch (e) {
+      throw Exception('Failed to add preset: $e');
+    }
+  }
+
+  Future<void> updatePreset(String id, String title, String body) async {
+    try {
+      await _presetsRef.doc(id).update({'title': title, 'body': body});
+    } catch (e) {
+      throw Exception('Failed to update preset: $e');
+    }
+  }
+
+  Future<void> deletePreset(String id) async {
+    try {
+      await _presetsRef.doc(id).delete();
+    } catch (e) {
+      throw Exception('Failed to delete preset: $e');
+    }
   }
 }

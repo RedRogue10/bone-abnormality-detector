@@ -15,6 +15,7 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
+
 import kotlin.math.sqrt
 
 class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
@@ -91,65 +92,88 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             }
         }
 
-        // Auto-detect rank-2 (predictions) and rank-4 (feature map) outputs
+        // Auto-detect predictions (rank 1–2) and feature map (rank 3–4).
+        // Uses ByteBuffer outputs to stay shape-agnostic at the Java/Kotlin layer.
         val numOutputs = interpreter.outputTensorCount
         Log.d(TAG, "Model has $numOutputs output(s)")
         var predIdx = -1
         var featIdx = -1
         for (i in 0 until numOutputs) {
             val shape = interpreter.getOutputTensor(i).shape()
-            Log.d(TAG, "  Output $i shape: ${shape.toList()}")
+            Log.d(TAG, "  Output $i: shape=${shape.toList()}, rank=${shape.size}")
             when (shape.size) {
-                2 -> predIdx = i
-                4 -> featIdx = i
+                1, 2 -> if (predIdx < 0) predIdx = i
+                3, 4 -> if (featIdx < 0) featIdx = i
             }
         }
         if (predIdx < 0 || featIdx < 0) {
+            val shapes = (0 until numOutputs).map { interpreter.getOutputTensor(it).shape().toList() }
             throw IllegalStateException(
-                "Unexpected outputs: need rank-2 (predictions) and rank-4 (feature map), " +
-                "found $numOutputs output(s)"
+                "Cannot find required outputs (predictions rank≤2 + feature map rank≥3). " +
+                "Model has $numOutputs output(s) with shapes: $shapes"
             )
         }
 
-        // onnx2tf always outputs NHWC, so feature map is [1, H, W, C]
         val featShape = interpreter.getOutputTensor(featIdx).shape()
-        val featH = featShape[1]
-        val featW = featShape[2]
-        val featC = featShape[3]
-        Log.d(TAG, "Feature map: [1, $featH, $featW, $featC]")
-
         val predShape = interpreter.getOutputTensor(predIdx).shape()
-        val outPred: Array<FloatArray> = Array(predShape[0]) { FloatArray(predShape[1]) }
-        val outFeat: Array<Array<Array<FloatArray>>> =
+
+        // Strip optional batch dimension: [1,H,W,C] → (H,W,C) or [H,W,C] → (H,W,C)
+        val (featH, featW, featC) = when (featShape.size) {
+            4 -> Triple(featShape[1], featShape[2], featShape[3])
+            3 -> Triple(featShape[0], featShape[1], featShape[2])
+            else -> throw IllegalStateException("Unexpected feature map rank: ${featShape.size}")
+        }
+        Log.d(TAG, "Feature map: [${featH}×${featW}×${featC}]")
+
+        // Allocate typed-array outputs — TFLite on Android requires typed arrays for outputs
+        val predArr: Any = if (predShape.size == 1)
+            FloatArray(predShape[0])
+        else
+            Array(predShape[0]) { FloatArray(predShape[1]) }
+
+        val featArr: Any = if (featShape.size == 3)
+            Array(featH) { Array(featW) { FloatArray(featC) } }
+        else
             Array(1) { Array(featH) { Array(featW) { FloatArray(featC) } } }
 
         val outputs = HashMap<Int, Any>()
-        outputs[predIdx] = outPred
-        outputs[featIdx] = outFeat
+        outputs[predIdx] = predArr
+        outputs[featIdx] = featArr
         interpreter.runForMultipleInputsOutputs(arrayOf<Any>(inputBuf), outputs)
         interpreter.close()
 
-        val probs = outPred[0]
+        // Extract predictions — unwrap batch dim if rank 2
+        val probs: FloatArray = if (predShape.size == 1)
+            predArr as FloatArray
+        else
+            (predArr as Array<FloatArray>)[0]
         Log.d(TAG, "Probs: ${probs.toList()}")
+
+        // Build accessor for feature map — handles rank 3 [H,W,C] and rank 4 [1,H,W,C]
+        val feat: (Int, Int, Int) -> Float = if (featShape.size == 3) {
+            val f = featArr as Array<Array<FloatArray>>
+            { y, x, c -> f[y][x][c] }
+        } else {
+            val f = (featArr as Array<Array<Array<FloatArray>>>)[0]
+            { y, x, c -> f[y][x][c] }
+        }
 
         // Eigen-CAM: power iteration to find dominant activation direction,
         // then project the feature map onto it for the spatial heatmap.
         val rows = featH * featW
         var v = FloatArray(featC) { 1f / sqrt(featC.toFloat()) }
         repeat(10) {
-            // mv = M @ v  [rows]
             val mv = FloatArray(rows) { r ->
                 val y = r / featW; val x = r % featW
                 var s = 0f
-                for (c in 0 until featC) s += outFeat[0][y][x][c] * v[c]
+                for (c in 0 until featC) s += feat(y, x, c) * v[c]
                 s
             }
-            // v_new = M^T @ mv  [featC]
             val vNew = FloatArray(featC) { c ->
                 var s = 0f
                 for (r in 0 until rows) {
                     val y = r / featW; val x = r % featW
-                    s += outFeat[0][y][x][c] * mv[r]
+                    s += feat(y, x, c) * mv[r]
                 }
                 s
             }
@@ -161,7 +185,7 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         val camGrid = Array(featH) { y ->
             FloatArray(featW) { x ->
                 var s = 0f
-                for (c in 0 until featC) s += outFeat[0][y][x][c] * v[c]
+                for (c in 0 until featC) s += feat(y, x, c) * v[c]
                 s
             }
         }
