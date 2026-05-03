@@ -54,9 +54,9 @@ class _XrayHistoryState extends State<XrayHistory> {
   Widget _buildScanCard(XrayScan scan) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: SizedBox(
+      child: Container(
         width: double.infinity,
-        height: 95,
+        constraints: const BoxConstraints(minHeight: 95),
         child: Material(
           elevation: 3,
           borderRadius: BorderRadius.circular(16),
@@ -74,76 +74,78 @@ class _XrayHistoryState extends State<XrayHistory> {
               );
             },
             borderRadius: BorderRadius.circular(16),
-            child: Row(
-              children: [
-                // Thumbnail
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                  ),
-                  child: Image.network(
-                    scan.imageUrl,
-                    width: 120,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                // Details
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "X-ray Scan",
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: primaryBlue,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          formatDate(scan.createdAt),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.black87,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          "Scan ID: ${scan.id}",
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontStyle: FontStyle.italic,
-                            color: grey,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Thumbnail
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
+                    child: Image.network(
+                      scan.imageUrl,
+                      width: 120,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ),
 
-                // Arrow
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: primaryBlue,
-                    size: 20,
+                  const SizedBox(width: 14),
+
+                  // Details
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "X-ray Scan",
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: primaryBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            formatDate(scan.createdAt),
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "Scan ID: ${scan.id}",
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontStyle: FontStyle.italic,
+                              color: grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
+
+                  // Arrow
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: primaryBlue,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
