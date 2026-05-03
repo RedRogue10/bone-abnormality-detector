@@ -87,7 +87,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Bone abnormality detector',
+      title: 'X-ray Reader | Bone Abnormality Detector',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A73E9)),
         useMaterial3: true,

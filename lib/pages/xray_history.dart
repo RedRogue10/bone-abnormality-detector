@@ -54,9 +54,9 @@ class _XrayHistoryState extends State<XrayHistory> {
   Widget _buildScanCard(XrayScan scan) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-      child: SizedBox(
+      child: Container(
         width: double.infinity,
-        height: 95,
+        constraints: const BoxConstraints(minHeight: 95),
         child: Material(
           elevation: 3,
           borderRadius: BorderRadius.circular(16),
@@ -74,72 +74,78 @@ class _XrayHistoryState extends State<XrayHistory> {
               );
             },
             borderRadius: BorderRadius.circular(16),
-            child: Row(
-              children: [
-                // Thumbnail
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    bottomLeft: Radius.circular(16),
-                  ),
-                  child: Image.network(
-                    scan.imageUrl,
-                    width: 120,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-
-                const SizedBox(width: 14),
-
-                // Details 
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "X-ray Scan",
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: primaryBlue,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          formatDate(scan.createdAt),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          "Scan ID: ${scan.id}",
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontStyle: FontStyle.italic,
-                            color: grey,
-                          ),
-                        ),
-                      ],
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Thumbnail
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                    ),
+                    child: Image.network(
+                      scan.imageUrl,
+                      width: 120,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                ),
 
-                // Arrow
-                Padding(
-                  padding: const EdgeInsets.only(right: 16),
-                  child: const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: primaryBlue,
-                    size: 20,
+                  const SizedBox(width: 14),
+
+                  // Details
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "X-ray Scan",
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: primaryBlue,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            formatDate(scan.createdAt),
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "Scan ID: ${scan.id}",
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontStyle: FontStyle.italic,
+                              color: grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
+
+                  // Arrow
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: const Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: primaryBlue,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -160,10 +166,7 @@ class _XrayHistoryState extends State<XrayHistory> {
         ),
         title: Text(
           'X-RAY HISTORY',
-          style: GoogleFonts.oswald(
-            color: white,
-            fontSize: 20,
-          ),
+          style: GoogleFonts.oswald(color: white, fontSize: 20),
         ),
         centerTitle: true,
         actions: [
@@ -187,7 +190,7 @@ class _XrayHistoryState extends State<XrayHistory> {
       ),
       body: Column(
         children: [
-          // ── Navy Patient Header 
+          // ── Navy Patient Header
           Container(
             width: double.infinity,
             color: darkNavy,
@@ -238,12 +241,10 @@ class _XrayHistoryState extends State<XrayHistory> {
             ),
           ),
 
-          // Scan List 
+          // Scan List
           Expanded(
             child: StreamBuilder<List<XrayScan>>(
-              stream: DatabaseService().getPatientScansStream(
-                widget.patientId,
-              ),
+              stream: DatabaseService().getPatientScansStream(widget.patientId),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -264,10 +265,7 @@ class _XrayHistoryState extends State<XrayHistory> {
                         const SizedBox(height: 12),
                         Text(
                           'No scans found',
-                          style: GoogleFonts.poppins(
-                            fontSize: 15,
-                            color: grey,
-                          ),
+                          style: GoogleFonts.poppins(fontSize: 15, color: grey),
                         ),
                       ],
                     ),
@@ -277,8 +275,7 @@ class _XrayHistoryState extends State<XrayHistory> {
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   itemCount: scans.length,
-                  itemBuilder: (context, index) =>
-                      _buildScanCard(scans[index]),
+                  itemBuilder: (context, index) => _buildScanCard(scans[index]),
                 );
               },
             ),
