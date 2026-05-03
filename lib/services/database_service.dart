@@ -531,35 +531,55 @@ class DatabaseService {
 
   // ── Interpretation Presets ────────────────────────────────────────────────
 
-  CollectionReference<Map<String, dynamic>> get _presetsRef {
-    final uid = FirebaseAuth.instance.currentUser!.uid;
+  CollectionReference<InterpretationPreset> get _presetsRef {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('No user logged in');
     return _firestore
         .collection(DOCTOR_COLLECTION_REF)
-        .doc(uid)
-        .collection('interpretation_presets');
+        .doc(user.uid)
+        .collection('interpretation_presets')
+        .withConverter<InterpretationPreset>(
+          fromFirestore: (snap, _) =>
+              InterpretationPreset.fromMap(snap.data()!, snap.id),
+          toFirestore: (preset, _) => preset.toMap(),
+        );
   }
 
   Future<List<InterpretationPreset>> getPresets() async {
-    final snap = await _presetsRef.orderBy('createdAt').get();
-    return snap.docs
-        .map((d) => InterpretationPreset.fromMap(d.data(), d.id))
-        .toList();
+    try {
+      final snap = await _presetsRef.orderBy('createdAt').get();
+      return snap.docs.map((d) => d.data()).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch presets: $e');
+    }
   }
 
   Future<void> addPreset(String title, String body) async {
-    await _presetsRef.add(InterpretationPreset(
-      id:        '',
-      title:     title,
-      body:      body,
-      createdAt: DateTime.now(),
-    ).toMap());
+    try {
+      await _presetsRef.add(InterpretationPreset(
+        id:        '',
+        title:     title,
+        body:      body,
+        createdAt: DateTime.now(),
+      ));
+    } catch (e) {
+      throw Exception('Failed to add preset: $e');
+    }
   }
 
   Future<void> updatePreset(String id, String title, String body) async {
-    await _presetsRef.doc(id).update({'title': title, 'body': body});
+    try {
+      await _presetsRef.doc(id).update({'title': title, 'body': body});
+    } catch (e) {
+      throw Exception('Failed to update preset: $e');
+    }
   }
 
   Future<void> deletePreset(String id) async {
-    await _presetsRef.doc(id).delete();
+    try {
+      await _presetsRef.doc(id).delete();
+    } catch (e) {
+      throw Exception('Failed to delete preset: $e');
+    }
   }
 }

@@ -50,8 +50,6 @@ class _XrayInfoState extends State<XrayInfo> {
   List<InterpretationPreset> _presets = [];
 
   int _currentImageIndex = 0;
-  // 0 = original xray, 1 = CAM overlay (reserved for future integration)
-  static const int _imageCount = 2;
 
   @override
   void initState() {
@@ -76,6 +74,7 @@ class _XrayInfoState extends State<XrayInfo> {
           _result = output.result;
           _camImage = output.camImage;
           _isLoading = false;
+          if (output.camImage == null) _currentImageIndex = 0;
         });
       }
     } catch (e) {
@@ -633,7 +632,7 @@ class _XrayInfoState extends State<XrayInfo> {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    ...List.generate(_imageCount, (i) {
+                                    ...List.generate(_camImage != null ? 2 : 1, (i) {
                                       final active = i == _currentImageIndex;
                                       return GestureDetector(
                                         onTap: () => setState(
@@ -657,8 +656,8 @@ class _XrayInfoState extends State<XrayInfo> {
                                     const SizedBox(width: 8),
                                     GestureDetector(
                                       onTap: () {
-                                        if (_currentImageIndex <
-                                            _imageCount - 1) {
+                                        if (_camImage != null &&
+                                            _currentImageIndex < 1) {
                                           setState(() => _currentImageIndex++);
                                         }
                                       },
