@@ -1,6 +1,6 @@
 import 'package:bone_abnormality_detector/pages/retrieve_scans.dart';
 import 'package:flutter/material.dart';
-import 'package:bone_abnormality_detector/main.dart';
+// import 'package:bone_abnormality_detector/main.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -114,15 +114,15 @@ class _DashboardPageState extends State<DashboardPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // TEMPORARY BUTTON
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const HomePage()),
-                        );
-                      },
-                      child: const Text("Testing buttons"),
-                    ),
+                    // ElevatedButton(
+                    //   onPressed: () {
+                    //     Navigator.push(
+                    //       context,
+                    //       MaterialPageRoute(builder: (_) => const HomePage()),
+                    //     );
+                    //   },
+                    //   child: const Text("Testing buttons"),
+                    // ),
 
                     // SCAN AN IMAGE
                     _buildScanButton(context),
@@ -452,7 +452,7 @@ class _DashboardPageState extends State<DashboardPage> {
             const Icon(Icons.camera_alt_outlined, color: white, size: 40),
             const SizedBox(width: 12),
             Text(
-              'SCAN AN IMAGE',
+              'SCAN AN X-RAY',
               style: GoogleFonts.oswald(color: white, fontSize: 25),
             ),
           ],

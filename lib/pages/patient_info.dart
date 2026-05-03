@@ -412,9 +412,12 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: Container(
+                                constraints: const BoxConstraints(
+                                  minHeight: 80,
+                                ),
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 35,
-                                  vertical: 30,
+                                  horizontal: 20,
+                                  vertical: 15,
                                 ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
@@ -433,12 +436,15 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      'View Xray Results',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        color: white,
-                                        fontWeight: FontWeight.bold,
+                                    Expanded(
+                                      child: Text(
+                                        'View Xray Results',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16,
+                                          color: white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        softWrap: true,
                                       ),
                                     ),
                                     Icon(
@@ -451,29 +457,31 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                               ),
                             ),
                           )
-                        : ElevatedButton(
-                            onPressed: null, // Disabled
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: grey,
-                              foregroundColor: white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 35,
-                                vertical: 30,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 4,
+                        : Container(
+                            // Disabled
+                            width: double.infinity,
+                            constraints: const BoxConstraints(minHeight: 80),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 15,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors
+                                  .grey[200], // Using a light grey background for disabled state
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: grey.withOpacity(0.5)),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  'No Xray Results Available',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    color: grey,
-                                    fontWeight: FontWeight.bold,
+                                Expanded(
+                                  child: Text(
+                                    'No Xray Results Available',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      color: grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
