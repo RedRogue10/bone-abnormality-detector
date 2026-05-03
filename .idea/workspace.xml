@@ -6,7 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/src/main/kotlin/com/example/bone_abnormality_detector/CamPlugin.kt" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/src/main/kotlin/com/example/bone_abnormality_detector/CamPlugin.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/pages/xray_info.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/xray_info.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/pages/xray_result.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/xray_result.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

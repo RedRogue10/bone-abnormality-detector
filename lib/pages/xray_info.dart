@@ -50,6 +50,8 @@ class _XrayInfoState extends State<XrayInfo> {
   List<InterpretationPreset> _presets = [];
 
   int _currentImageIndex = 0;
+  // 0 = original xray, 1 = CAM overlay (reserved for future integration)
+  static const int _imageCount = 2;
 
   @override
   void initState() {
@@ -74,7 +76,6 @@ class _XrayInfoState extends State<XrayInfo> {
           _result = output.result;
           _camImage = output.camImage;
           _isLoading = false;
-          if (output.camImage == null) _currentImageIndex = 0;
         });
       }
     } catch (e) {
@@ -351,7 +352,7 @@ class _XrayInfoState extends State<XrayInfo> {
             const Icon(Icons.person_search_rounded,
                 color: Colors.black45, size: 22),
             const SizedBox(width: 12),
-            Text('Select Contact',
+            Text('Select Patient',
                 style: GoogleFonts.poppins(fontSize: 14, color: Colors.black45)),
             const Spacer(),
             const Icon(Icons.chevron_right, color: Colors.black38, size: 20),
@@ -632,7 +633,7 @@ class _XrayInfoState extends State<XrayInfo> {
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    ...List.generate(_camImage != null ? 2 : 1, (i) {
+                                    ...List.generate(_imageCount, (i) {
                                       final active = i == _currentImageIndex;
                                       return GestureDetector(
                                         onTap: () => setState(
@@ -656,8 +657,8 @@ class _XrayInfoState extends State<XrayInfo> {
                                     const SizedBox(width: 8),
                                     GestureDetector(
                                       onTap: () {
-                                        if (_camImage != null &&
-                                            _currentImageIndex < 1) {
+                                        if (_currentImageIndex <
+                                            _imageCount - 1) {
                                           setState(() => _currentImageIndex++);
                                         }
                                       },
@@ -823,7 +824,6 @@ class _XrayInfoState extends State<XrayInfo> {
                                           builder: (_) => PresetPickerSheet(
                                               presets: _presets),
                                         );
-                                        await _loadPresets();
                                         if (body != null) {
                                           _interpretationCtrl.text = body;
                                         }
