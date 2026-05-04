@@ -143,7 +143,7 @@ class _PatientInfoScreenState extends State<PatientInfoScreen> {
                 if (kIsWeb) {
                   return const MobileOnlyPage();
                 } else {
-                  return const CameraCapturePage(patientId: '1');
+                  return CameraCapturePage(patientId: widget.patientId);
                 }
               },
             ),

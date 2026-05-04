@@ -18,7 +18,11 @@ import 'models/scan_result.dart';
 
 import 'url_strategy_noop.dart' if (dart.library.html) 'url_strategy_web.dart';
 
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
+
 final GoRouter _router = GoRouter(
+  observers: [routeObserver],
   initialLocation: '/login',
 
   redirect: (context, state) {

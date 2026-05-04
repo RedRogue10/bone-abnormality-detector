@@ -268,6 +268,17 @@ class DatabaseService {
 
       // delete the scan document
       await docRef.delete();
+
+      // remove from recent_views so the dashboard no longer shows it
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await _firestore
+            .collection(DOCTOR_COLLECTION_REF)
+            .doc(user.uid)
+            .collection('recent_views')
+            .doc(scanId)
+            .delete();
+      }
     } catch (e) {
       throw Exception('Failed to delete x-ray scan and associated images: $e');
     }

@@ -56,7 +56,7 @@ class ScanResult {
 
       generatedAt: (map['generatedAt'] as Timestamp).toDate(),
 
-      interpretation: map['interpretation'],
+      interpretation: map['interpretation'] ?? '',
     );
   }
 

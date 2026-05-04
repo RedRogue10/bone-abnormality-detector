@@ -13,6 +13,8 @@ import '../services/sharing_service.dart';
 import '../services/email_service.dart';
 import '../widgets/preset_picker_sheet.dart';
 import '../pages/add_patient.dart';
+import '../main.dart' show routeObserver;
+
 class XrayResultPage extends StatefulWidget {
   final String patientId;
   final String scanId;
@@ -27,7 +29,7 @@ class XrayResultPage extends StatefulWidget {
   State<XrayResultPage> createState() => _XrayResultPageState();
 }
 
-class _XrayResultPageState extends State<XrayResultPage> {
+class _XrayResultPageState extends State<XrayResultPage> with RouteAware {
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
   static const Color white = Colors.white;
@@ -59,12 +61,25 @@ class _XrayResultPageState extends State<XrayResultPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _interpretationCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadScan() async {
+  @override
+  void didPopNext() {
+    _loadScan(background: true);
+  }
+
+  Future<void> _loadScan({bool background = false}) async {
+    if (!background) setState(() => _isLoading = true);
     try {
       final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
       if (mounted) {
@@ -80,7 +95,7 @@ class _XrayResultPageState extends State<XrayResultPage> {
         _interpretationCtrl.text = scan.result?.interpretation ?? '';
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && !background) {
         setState(() {
           _errorMessage = e.toString();
           _isLoading = false;

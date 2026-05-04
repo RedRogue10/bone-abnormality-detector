@@ -14,6 +14,7 @@ import '../pages/xray_result.dart';
 import '../services/database_service.dart';
 import '../services/model_processing.dart';
 import '../widgets/preset_picker_sheet.dart';
+import '../main.dart' show routeObserver;
 
 class XrayInfo extends StatefulWidget {
   final File imageFile;
@@ -25,7 +26,7 @@ class XrayInfo extends StatefulWidget {
   State<XrayInfo> createState() => _XrayInfoState();
 }
 
-class _XrayInfoState extends State<XrayInfo> {
+class _XrayInfoState extends State<XrayInfo> with RouteAware {
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
   static const Color darkRed = Color(0xFF450B0B);
@@ -60,9 +61,22 @@ class _XrayInfoState extends State<XrayInfo> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _interpretationCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    _loadPatients();
+    _loadPresets();
   }
 
 
@@ -826,6 +840,7 @@ class _XrayInfoState extends State<XrayInfo> {
                                           builder: (_) => PresetPickerSheet(
                                               presets: _presets),
                                         );
+                                        await _loadPresets();
                                         if (body != null) {
                                           _interpretationCtrl.text = body;
                                         }
