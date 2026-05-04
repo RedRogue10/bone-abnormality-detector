@@ -529,6 +529,52 @@ class DatabaseService {
     );
   }
 
+  // ── Reassign scan to a different patient ─────────────────────────────────
+
+  Future<String> reassignScan({
+    required String oldPatientId,
+    required String scanId,
+    required String newPatientId,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('No user logged in');
+
+    final patientsRef = _firestore
+        .collection(DOCTOR_COLLECTION_REF)
+        .doc(user.uid)
+        .collection('patients');
+
+    final oldRef = patientsRef.doc(oldPatientId).collection('scans').doc(scanId);
+    final snapshot = await oldRef.get();
+    if (!snapshot.exists) throw Exception('Scan not found');
+
+    final data = Map<String, dynamic>.from(snapshot.data()!);
+    final newPatient = await getPatientById(newPatientId);
+    data['patientName'] = newPatient.fullName;
+
+    final newRef = patientsRef.doc(newPatientId).collection('scans').doc();
+    await newRef.set(data);
+    await oldRef.delete();
+
+    // Migrate recent_views entry so the dashboard doesn't point to the old location
+    final recentViewsRef = _firestore
+        .collection(DOCTOR_COLLECTION_REF)
+        .doc(user.uid)
+        .collection('recent_views');
+
+    final oldViewDoc = await recentViewsRef.doc(scanId).get();
+    if (oldViewDoc.exists) {
+      final viewData = Map<String, dynamic>.from(oldViewDoc.data()!);
+      viewData['patientId'] = newPatientId;
+      viewData['patientName'] = newPatient.fullName;
+      viewData['scanId'] = newRef.id;
+      await recentViewsRef.doc(newRef.id).set(viewData);
+      await recentViewsRef.doc(scanId).delete();
+    }
+
+    return newRef.id;
+  }
+
   // ── Interpretation Presets ────────────────────────────────────────────────
 
   CollectionReference<InterpretationPreset> get _presetsRef {

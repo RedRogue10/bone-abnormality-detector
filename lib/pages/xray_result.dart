@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
+import '../models/patient.dart';
 import '../models/interpretation_preset.dart';
 import '../models/scan_result.dart';
 import '../models/xray_scan.dart';
@@ -12,7 +12,7 @@ import '../services/database_service.dart';
 import '../services/sharing_service.dart';
 import '../services/email_service.dart';
 import '../widgets/preset_picker_sheet.dart';
-
+import '../pages/add_patient.dart';
 class XrayResultPage extends StatefulWidget {
   final String patientId;
   final String scanId;
@@ -31,6 +31,8 @@ class _XrayResultPageState extends State<XrayResultPage> {
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
   static const Color white = Colors.white;
+  static const Color fieldBg = Color(0xFFF0F0F0);
+
 
   final DatabaseService _db = DatabaseService();
   final TextEditingController _interpretationCtrl = TextEditingController();
@@ -43,12 +45,16 @@ class _XrayResultPageState extends State<XrayResultPage> {
   bool        _savingNote = false;
   List<InterpretationPreset> _presets = [];
 
+  Patient? _selectedPatient;
+  List<Patient> _allPatients = [];
+
   int _currentImageIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _loadScan();
+    _loadPatients();
     _loadPresets();
   }
 
@@ -223,17 +229,21 @@ class _XrayResultPageState extends State<XrayResultPage> {
                 Center(
                   child: GestureDetector(
                     onTap: () {},
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: ClipRRect(
+                    child: InteractiveViewer(
+                      minScale: 0.8,
+                      maxScale: 5.0,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.black,
                           borderRadius: BorderRadius.circular(16),
-                          child: _buildNetworkImage(),
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: 1,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: _buildImageForIndex(_currentImageIndex),
+                          ),
                         ),
                       ),
                     ),
@@ -246,7 +256,72 @@ class _XrayResultPageState extends State<XrayResultPage> {
       ),
     );
   }
+  Future<void> _loadPatients() async {
+    try {
+      final patients = await _db.getPatients();
+      if (!mounted) return;
+      setState(() {
+        _allPatients = patients;
+        if (_selectedPatient == null) {
+          final match = patients.where((p) => p.id == widget.patientId);
+          if (match.isNotEmpty) _selectedPatient = match.first;
+        }
+      });
+    } catch (_) {}
+  }
 
+  Future<void> _showPatientPicker() async {
+    final picked = await showModalBottomSheet<Patient>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _PatientPickerSheet(
+        patients: _allPatients,
+        currentPatientId: widget.patientId,
+        onAddPatient: () async {
+          Navigator.pop(ctx);
+          final added = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => const AddPatientPage()),
+          );
+          if (added == true) {
+            await _loadPatients();
+            if (mounted) _showPatientPicker();
+          }
+        },
+      ),
+    );
+    if (picked == null) return;
+    await _reassignPatient(picked);
+  }
+
+  Future<void> _reassignPatient(Patient newPatient) async {
+    setState(() => _isLoading = true);
+    try {
+      final newScanId = await _db.reassignScan(
+        oldPatientId: widget.patientId,
+        scanId: widget.scanId,
+        newPatientId: newPatient.id,
+      );
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => XrayResultPage(
+            patientId: newPatient.id,
+            scanId: newScanId,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reassign: $e')),
+        );
+      }
+    }
+  }
   Widget _buildImageForIndex(int index) {
     if (index == 0) return _buildNetworkImage();
 
@@ -451,6 +526,106 @@ class _XrayResultPageState extends State<XrayResultPage> {
     );
   }
 
+  Widget _buildPatientSelector() {
+    if (_selectedPatient != null) {
+      return Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _selectedPatient!.fullName,
+                  style: GoogleFonts.poppins(
+                    color: primaryBlue,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  '${_selectedPatient!.age} Years Old',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+                Text(
+                  _selectedPatient!.sex,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: _showPatientPicker,
+            child: Text('Change',
+                style: GoogleFonts.poppins(fontSize: 12, color: primaryBlue)),
+          ),
+        ],
+      );
+    }
+
+    return GestureDetector(
+      onTap: _showPatientPicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: fieldBg,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Colors.black12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.person_search_rounded,
+                color: Colors.black45, size: 22),
+            const SizedBox(width: 12),
+            Text('Select Patient',
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black45)),
+            const Spacer(),
+            const Icon(Icons.chevron_right, color: Colors.black38, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+  Future<void> _deleteScan() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete scan?',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        content: Text(
+          'This will permanently delete the scan and all associated images.',
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await _db.deleteXrayScan(widget.patientId, widget.scanId);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e')),
+        );
+      }
+    }
+  }
+
   PreferredSizeWidget _buildAppBar() => AppBar(
         backgroundColor: darkNavy,
         elevation: 0,
@@ -470,7 +645,12 @@ class _XrayResultPageState extends State<XrayResultPage> {
             icon: const Icon(Icons.share_outlined, color: white),
             tooltip: 'Share results',
             onPressed: _isLoading ? null : _showShareOptions,
-          )
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: white),
+            tooltip: 'Delete scan',
+            onPressed: _isLoading ? null : _deleteScan,
+          ),
         ],
       );
 
@@ -559,8 +739,16 @@ class _XrayResultPageState extends State<XrayResultPage> {
               '$dateStr Results',
               style: GoogleFonts.poppins(fontSize: 13, color: Colors.black87),
             ),
+            const SizedBox(height:10),
+            Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            child: _buildPatientSelector(),
+                          ),
             const SizedBox(height: 14),
-
+            
             // X-ray image
             GestureDetector(
               onTap: _showImageViewer,
@@ -630,6 +818,188 @@ class _XrayResultPageState extends State<XrayResultPage> {
 
             if (_result != null) _buildTextResult(),
             const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+}
+// ── Patient picker bottom sheet ──────────────────────────────────────────────
+
+class _PatientPickerSheet extends StatefulWidget {
+  final List<Patient> patients;
+  final String currentPatientId;
+  final VoidCallback onAddPatient;
+
+  const _PatientPickerSheet({
+    required this.patients,
+    required this.currentPatientId,
+    required this.onAddPatient,
+  });
+
+  @override
+  State<_PatientPickerSheet> createState() => _PatientPickerSheetState();
+}
+
+class _PatientPickerSheetState extends State<_PatientPickerSheet> {
+  static const Color darkNavy    = Color(0xFF0B2545);
+  static const Color primaryBlue = Color(0xFF1A73E9);
+  static const Color white       = Colors.white;
+
+  final TextEditingController _search = TextEditingController();
+  List<Patient> _filtered = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.patients
+        .where((p) => p.id != widget.currentPatientId)
+        .toList();
+    _search.addListener(_onSearch);
+  }
+
+  @override
+  void dispose() {
+    _search.removeListener(_onSearch);
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _onSearch() {
+    final q = _search.text.trim().toLowerCase();
+    final base = widget.patients
+        .where((p) => p.id != widget.currentPatientId)
+        .toList();
+    setState(() {
+      _filtered = q.isEmpty
+          ? base
+          : base.where((p) => p.fullName.toLowerCase().contains(q)).toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (_, scrollCtrl) => Container(
+        decoration: const BoxDecoration(
+          color: white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: EdgeInsets.only(bottom: bottomPad),
+        child: Column(
+          children: [
+            // Handle
+            const SizedBox(height: 10),
+            Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Text('Select Patient',
+                      style: GoogleFonts.oswald(
+                          fontSize: 18,
+                          color: darkNavy,
+                          letterSpacing: 1.2)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Search bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: TextField(
+                controller: _search,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Search by name…',
+                  hintStyle: GoogleFonts.poppins(
+                      fontSize: 13, color: Colors.black38),
+                  prefixIcon: const Icon(Icons.search,
+                      size: 20, color: Colors.black45),
+                  filled: true,
+                  fillColor: const Color(0xFFF0F0F0),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 10),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none),
+                ),
+                style: GoogleFonts.poppins(fontSize: 13),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+
+            // List
+            Expanded(
+              child: ListView(
+                controller: scrollCtrl,
+                children: [
+                  // Add new patient
+                  ListTile(
+                    leading: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: primaryBlue.withValues(alpha: 0.12),
+                      child: const Icon(Icons.person_add_alt_1_rounded,
+                          color: primaryBlue, size: 20),
+                    ),
+                    title: Text('Add New Patient',
+                        style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: primaryBlue)),
+                    onTap: widget.onAddPatient,
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+
+                  if (_filtered.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text('No patients found.',
+                            style: GoogleFonts.poppins(
+                                fontSize: 13, color: Colors.black38)),
+                      ),
+                    )
+                  else
+                    ..._filtered.map((p) => ListTile(
+                          leading: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: darkNavy,
+                            child: Text(p.initials,
+                                style: const TextStyle(
+                                    color: white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text(p.fullName,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                              '${p.age} yrs · ${p.sex}',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 12, color: Colors.black54)),
+                          onTap: () => Navigator.pop(context, p),
+                        )),
+                ],
+              ),
+            ),
           ],
         ),
       ),

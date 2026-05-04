@@ -74,7 +74,6 @@ class _XrayInfoState extends State<XrayInfo> {
           _result = output.result;
           _camImage = output.camImage;
           _isLoading = false;
-          if (output.camImage == null) _currentImageIndex = 0;
         });
       }
     } catch (e) {
@@ -222,13 +221,17 @@ class _XrayInfoState extends State<XrayInfo> {
                   Center(
                     child: GestureDetector(
                       onTap: () {},
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        decoration: const BoxDecoration(color: Colors.black),
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: ClipRect(
-                            child: _buildImageForIndex(_currentImageIndex),
+                      child: InteractiveViewer(
+                        minScale: 0.8,
+                        maxScale: 5.0,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: const BoxDecoration(color: Colors.black),
+                          child: AspectRatio(
+                            aspectRatio: 1,
+                            child: ClipRect(
+                              child: _buildImageForIndex(_currentImageIndex),
+                            ),
                           ),
                         ),
                       ),
@@ -351,7 +354,7 @@ class _XrayInfoState extends State<XrayInfo> {
             const Icon(Icons.person_search_rounded,
                 color: Colors.black45, size: 22),
             const SizedBox(width: 12),
-            Text('Select Contact',
+            Text('Select Patient',
                 style: GoogleFonts.poppins(fontSize: 14, color: Colors.black45)),
             const Spacer(),
             const Icon(Icons.chevron_right, color: Colors.black38, size: 20),
@@ -823,7 +826,6 @@ class _XrayInfoState extends State<XrayInfo> {
                                           builder: (_) => PresetPickerSheet(
                                               presets: _presets),
                                         );
-                                        await _loadPresets();
                                         if (body != null) {
                                           _interpretationCtrl.text = body;
                                         }
