@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AndroidLayouts">
+    <shared>
+      <config />
+    </shared>
+  </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d19ba3e3-3c95-42d5-afe9-8f6c52ba63f9" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/main.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/models/scan_result.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/scan_result.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/pages/xray_info.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/xray_info.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/pages/xray_result.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/xray_result.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/services/database_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/services/database_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/pages/retrieve_scans.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/retrieve_scans.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/pages/xray_history.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/pages/xray_history.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

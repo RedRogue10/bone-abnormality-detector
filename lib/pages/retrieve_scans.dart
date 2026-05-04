@@ -262,7 +262,14 @@ class _AllScansPageState extends State<AllScansPage> {
             SizedBox(
               width: isPinned ? 75 : 72,
               child: scan['imageUrl'] != null && scan['imageUrl'] != ''
-                  ? Image.network(scan['imageUrl'], fit: BoxFit.cover)
+                  ? Image.network(
+                      scan['imageUrl'],
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => Image.asset(
+                        'assets/images/xray.png',
+                        fit: BoxFit.cover,
+                      ),
+                    )
                   : Image.asset('assets/images/xray.png', fit: BoxFit.cover),
             ),
             const SizedBox(width: 14),

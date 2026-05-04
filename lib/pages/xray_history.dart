@@ -88,6 +88,11 @@ class _XrayHistoryState extends State<XrayHistory> {
                       scan.imageUrl,
                       width: 120,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stack) => Image.asset(
+                        'assets/images/xray.png',
+                        width: 120,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
 
