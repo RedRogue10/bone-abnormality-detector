@@ -95,9 +95,11 @@ class InfoScreen extends StatelessWidget {
                     title: 'WHAT IT DOES',
                     child: Text(
                       'A clinical mobile tool designed for doctors and radiologists. It uses a '
-                      'trained deep learning model to analyze bone X-rays and detect fractures '
-                      'and structural abnormalities which helps physicians make faster, more '
-                      'informed diagnostic decisions at the point of care.',
+                      'trained deep learning model to analyze bone X-rays and identify structural '
+                      'abnormalities, helping physicians make faster and more informed diagnostic '
+                      'decisions at the point of care. The application is specifically developed '
+                      'for upper extremity X-ray analysis, including the shoulder, humerus, '
+                      'forearm, elbow, finger, hand, and wrist.',
                       style: _bodyStyle(),
                     ),
                   ),
