@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:bone_abnormality_detector/firebase_options.dart';
@@ -18,7 +19,11 @@ import 'models/scan_result.dart';
 
 import 'url_strategy_noop.dart' if (dart.library.html) 'url_strategy_web.dart';
 
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
+
 final GoRouter _router = GoRouter(
+  observers: [routeObserver],
   initialLocation: '/login',
 
   redirect: (context, state) {
@@ -75,6 +80,11 @@ void main() async {
   setupUrlStrategy();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
 
   print("Firebase initialized successfully!");
 

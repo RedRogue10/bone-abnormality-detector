@@ -13,6 +13,10 @@ import '../services/sharing_service.dart';
 import '../services/email_service.dart';
 import '../widgets/preset_picker_sheet.dart';
 import '../pages/add_patient.dart';
+import '../services/pdf_export_service.dart';
+import '../main.dart' show routeObserver;
+import 'package:printing/printing.dart';
+
 class XrayResultPage extends StatefulWidget {
   final String patientId;
   final String scanId;
@@ -27,7 +31,7 @@ class XrayResultPage extends StatefulWidget {
   State<XrayResultPage> createState() => _XrayResultPageState();
 }
 
-class _XrayResultPageState extends State<XrayResultPage> {
+class _XrayResultPageState extends State<XrayResultPage> with RouteAware {
   static const Color darkNavy = Color(0xFF0B2545);
   static const Color primaryBlue = Color(0xFF1A73E9);
   static const Color white = Colors.white;
@@ -41,8 +45,8 @@ class _XrayResultPageState extends State<XrayResultPage> {
   ScanResult? _result;
   String?     _camImageUrl;
   String?     _errorMessage;
-  bool        _isLoading  = true;
-  bool        _savingNote = false;
+  bool        _isLoading    = true;
+  bool        _savingNote   = false;
   List<InterpretationPreset> _presets = [];
 
   Patient? _selectedPatient;
@@ -59,12 +63,25 @@ class _XrayResultPageState extends State<XrayResultPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _interpretationCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadScan() async {
+  @override
+  void didPopNext() {
+    _loadScan(background: true);
+  }
+
+  Future<void> _loadScan({bool background = false}) async {
+    if (!background) setState(() => _isLoading = true);
     try {
       final scan = await _db.getXrayScanById(widget.patientId, widget.scanId);
       if (mounted) {
@@ -80,9 +97,24 @@ class _XrayResultPageState extends State<XrayResultPage> {
         _interpretationCtrl.text = scan.result?.interpretation ?? '';
       }
     } catch (e) {
-      if (mounted) {
+      final msg = e.toString();
+      if (msg.contains('Scan not found') || msg.contains('not found')) {
+        // Stale recent_views entry — clean it up and go back.
+        await _db.deleteRecentView(widget.scanId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This scan no longer exists and has been removed from your recent list.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+          Navigator.of(context).pop();
+        }
+        return;
+      }
+      if (mounted && !background) {
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = msg;
           _isLoading = false;
         });
       }
@@ -199,6 +231,55 @@ class _XrayResultPageState extends State<XrayResultPage> {
         setState(() => _savingNote = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _exportPdf() async {
+    if (_scan == null || _result == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Generating PDF…'),
+        duration: Duration(minutes: 5),
+      ),
+    );
+    try {
+      final (:bytes, :filename) = await PdfExportService().exportScanReport(
+        scan: _scan!,
+        result: _result!,
+        patient: _selectedPatient,
+      );
+      messenger.clearSnackBars();
+      if (!mounted) {
+        await PdfExportService().savePdfToDownloads(bytes, filename);
+        return;
+      }
+      final controller = messenger.showSnackBar(
+        SnackBar(
+          content: const Text('PDF ready'),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Save',
+            onPressed: () => Printing.sharePdf(bytes: bytes, filename: filename),
+          ),
+        ),
+      );
+      final reason = await controller.closed;
+      if (reason != SnackBarClosedReason.action) {
+        await PdfExportService().savePdfToDownloads(bytes, filename);
+        if (mounted) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('PDF saved to Files')),
+          );
+        }
+      }
+    } catch (e) {
+      messenger.clearSnackBars();
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('Failed to export PDF: $e')),
         );
       }
     }
@@ -397,67 +478,20 @@ class _XrayResultPageState extends State<XrayResultPage> {
     );
   }
 
-  Widget _buildTextResult() {
-    final result = _result!;
-    final isAbnormal = result.hasAbnormality;
-    final label = isAbnormal
-        ? 'ABNORMALITY DETECTED'
-        : 'NO ABNORMALITY DETECTED';
-    final confidenceText =
-        '${(result.abnormalityConfidence * 100).toStringAsFixed(1)}% Abnormality Confidence';
-    final topPrediction = result.topPredictions.isNotEmpty
-        ? result.topPredictions.first
-        : null;
-
+  Widget _buildInterpretationSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Center(
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: isAbnormal ? Colors.red : primaryBlue,
-              fontWeight: FontWeight.w500,
-              fontSize: 22,
-              letterSpacing: 1.2,
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Center(
-          child: Text(
-            confidenceText,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'BONE PART DETECTED',
-          style: GoogleFonts.oswald(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: 12),
-        if (topPrediction != null)
-          _buildBonePart(
-            topPrediction.bonePart.toUpperCase(),
-            '${(topPrediction.confidence * 100).toStringAsFixed(1)}% Confidence',
-          ),
-        const SizedBox(height: 28),
-        const Divider(),
-        const SizedBox(height: 16),
         Row(
           children: [
-            Text('INTERPRETATION',
-                style: GoogleFonts.oswald(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    letterSpacing: 1.2)),
+            Text(
+              'INTERPRETATION',
+              style: GoogleFonts.oswald(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  letterSpacing: 1.2),
+            ),
             const Spacer(),
             TextButton.icon(
               icon: const Icon(Icons.format_list_bulleted, size: 15),
@@ -514,7 +548,8 @@ class _XrayResultPageState extends State<XrayResultPage> {
             ),
             child: _savingNote
                 ? const SizedBox(
-                    width: 16, height: 16,
+                    width: 16,
+                    height: 16,
                     child: CircularProgressIndicator(
                         color: Colors.white, strokeWidth: 2))
                 : Text('Save Note',
@@ -522,6 +557,57 @@ class _XrayResultPageState extends State<XrayResultPage> {
                         fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildTextResult() {
+    final result = _result!;
+    final isAbnormal = result.hasAbnormality;
+    final label = isAbnormal ? 'ABNORMALITY DETECTED' : 'NO ABNORMALITY DETECTED';
+    final confidenceText =
+        '${(result.abnormalityConfidence * 100).toStringAsFixed(1)}% Abnormality Confidence';
+    final topPrediction =
+        result.topPredictions.isNotEmpty ? result.topPredictions.first : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Center(
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: isAbnormal ? Colors.red : primaryBlue,
+              fontWeight: FontWeight.w500,
+              fontSize: 22,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Center(
+          child: Text(
+            confidenceText,
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'BONE PART DETECTED',
+          style: GoogleFonts.oswald(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (topPrediction != null)
+          _buildBonePart(
+            topPrediction.bonePart.toUpperCase(),
+            '${(topPrediction.confidence * 100).toStringAsFixed(1)}% Confidence',
+          ),
       ],
     );
   }
@@ -645,6 +731,11 @@ class _XrayResultPageState extends State<XrayResultPage> {
             icon: const Icon(Icons.share_outlined, color: white),
             tooltip: 'Share results',
             onPressed: _isLoading ? null : _showShareOptions,
+          ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined, color: white),
+            tooltip: 'Export PDF',
+            onPressed: _isLoading ? null : _exportPdf,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: white),
@@ -815,6 +906,13 @@ class _XrayResultPageState extends State<XrayResultPage> {
               ],
             ),
             const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 12),
+
+            _buildInterpretationSection(),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 12),
 
             if (_result != null) _buildTextResult(),
             const SizedBox(height: 32),
