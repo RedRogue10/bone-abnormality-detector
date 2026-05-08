@@ -263,16 +263,6 @@ class _PatientWebViewState extends State<PatientWebView> {
                   color: Color(0xFF1A1A1A),
                 ),
               ),
-              _MetaLabel(text: 'PATIENT ID'),
-              SizedBox(height: 3),
-              Text(
-                patientId,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF1A1A1A),
-                ),
-              ),
             ],
           ),
           Column(
@@ -285,16 +275,6 @@ class _PatientWebViewState extends State<PatientWebView> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1A1A1A),
-                ),
-              ),
-              _MetaLabel(text: 'SCAN ID'),
-              SizedBox(height: 3),
-              Text(
-                scanId,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
                   color: Color(0xFF1A1A1A),
                 ),
               ),
