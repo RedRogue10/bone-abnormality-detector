@@ -15,6 +15,7 @@ import '../widgets/preset_picker_sheet.dart';
 import '../pages/add_patient.dart';
 import '../services/pdf_export_service.dart';
 import '../main.dart' show routeObserver;
+import 'package:printing/printing.dart';
 
 class XrayResultPage extends StatefulWidget {
   final String patientId;
@@ -46,7 +47,6 @@ class _XrayResultPageState extends State<XrayResultPage> with RouteAware {
   String?     _errorMessage;
   bool        _isLoading    = true;
   bool        _savingNote   = false;
-  bool        _exportingPdf = false;
   List<InterpretationPreset> _presets = [];
 
   Patient? _selectedPatient;
@@ -97,9 +97,24 @@ class _XrayResultPageState extends State<XrayResultPage> with RouteAware {
         _interpretationCtrl.text = scan.result?.interpretation ?? '';
       }
     } catch (e) {
+      final msg = e.toString();
+      if (msg.contains('Scan not found') || msg.contains('not found')) {
+        // Stale recent_views entry — clean it up and go back.
+        await _db.deleteRecentView(widget.scanId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('This scan no longer exists and has been removed from your recent list.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+          Navigator.of(context).pop();
+        }
+        return;
+      }
       if (mounted && !background) {
         setState(() {
-          _errorMessage = e.toString();
+          _errorMessage = msg;
           _isLoading = false;
         });
       }
@@ -222,22 +237,51 @@ class _XrayResultPageState extends State<XrayResultPage> with RouteAware {
   }
 
   Future<void> _exportPdf() async {
-    if (_scan == null || _result == null || _exportingPdf) return;
-    setState(() => _exportingPdf = true);
+    if (_scan == null || _result == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Generating PDF…'),
+        duration: Duration(minutes: 5),
+      ),
+    );
     try {
-      await PdfExportService().exportScanReport(
+      final (:bytes, :filename) = await PdfExportService().exportScanReport(
         scan: _scan!,
         result: _result!,
         patient: _selectedPatient,
       );
+      messenger.clearSnackBars();
+      if (!mounted) {
+        await PdfExportService().savePdfToDownloads(bytes, filename);
+        return;
+      }
+      final controller = messenger.showSnackBar(
+        SnackBar(
+          content: const Text('PDF ready'),
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: 'Save',
+            onPressed: () => Printing.sharePdf(bytes: bytes, filename: filename),
+          ),
+        ),
+      );
+      final reason = await controller.closed;
+      if (reason != SnackBarClosedReason.action) {
+        await PdfExportService().savePdfToDownloads(bytes, filename);
+        if (mounted) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('PDF saved to Files')),
+          );
+        }
+      }
     } catch (e) {
+      messenger.clearSnackBars();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Failed to export PDF: $e')),
         );
       }
-    } finally {
-      if (mounted) setState(() => _exportingPdf = false);
     }
   }
 
@@ -688,21 +732,11 @@ class _XrayResultPageState extends State<XrayResultPage> with RouteAware {
             tooltip: 'Share results',
             onPressed: _isLoading ? null : _showShareOptions,
           ),
-          _exportingPdf
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                        color: white, strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  icon: const Icon(Icons.picture_as_pdf_outlined, color: white),
-                  tooltip: 'Export PDF',
-                  onPressed: _isLoading ? null : _exportPdf,
-                ),
+          IconButton(
+            icon: const Icon(Icons.picture_as_pdf_outlined, color: white),
+            tooltip: 'Export PDF',
+            onPressed: _isLoading ? null : _exportPdf,
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: white),
             tooltip: 'Delete scan',

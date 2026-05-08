@@ -3,9 +3,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show consolidateHttpClientResponseBytes;
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 import '../models/patient.dart';
 import '../models/scan_result.dart';
@@ -16,7 +16,7 @@ class PdfExportService {
   static const _navy = PdfColor(0.043, 0.145, 0.271); // #0B2545
   static const _bg   = PdfColor(0.941, 0.941, 0.961); // #F0F0F5
 
-  Future<void> exportScanReport({
+  Future<({Uint8List bytes, String filename})> exportScanReport({
     required XrayScan scan,
     required ScanResult result,
     required Patient? patient,
@@ -66,10 +66,16 @@ class PdfExportService {
     final namePart = patient != null
         ? patient.lastName.toLowerCase().replaceAll(' ', '_')
         : 'scan';
-    await Printing.sharePdf(
-      bytes: await doc.save(),
-      filename: 'xray_report_${namePart}_$dateStr.pdf',
-    );
+    final filename = 'xray_report_${namePart}_$dateStr.pdf';
+    final bytes = await doc.save();
+    return (bytes: bytes, filename: filename);
+  }
+
+  Future<String> savePdfToDownloads(Uint8List bytes, String filename) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File('${dir.path}/$filename');
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────

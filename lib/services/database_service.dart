@@ -118,6 +118,14 @@ class DatabaseService {
           .collection('scans')
           .get();
 
+      final user = FirebaseAuth.instance.currentUser;
+      final recentViewsRef = user == null
+          ? null
+          : _firestore
+              .collection(DOCTOR_COLLECTION_REF)
+              .doc(user.uid)
+              .collection('recent_views');
+
       for (var scanDoc in scansSnapshot.docs) {
         final data = scanDoc.data();
 
@@ -137,9 +145,12 @@ class DatabaseService {
 
         // Delete the scan document
         await scanDoc.reference.delete();
+
+        // Remove from recent_views so the dashboard tile disappears
+        await recentViewsRef?.doc(scanDoc.id).delete();
       }
 
-      // Deelete the patient document
+      // Delete the patient document
       await _getPatientCollectionRef.doc(patientId).delete();
 
       print("Patient and all associated data deleted successfully.");
@@ -455,6 +466,17 @@ class DatabaseService {
         .orderBy('lastAccessed', descending: true)
         .limit(10)
         .snapshots();
+  }
+
+  Future<void> deleteRecentView(String scanId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    await _firestore
+        .collection(DOCTOR_COLLECTION_REF)
+        .doc(user.uid)
+        .collection('recent_views')
+        .doc(scanId)
+        .delete();
   }
 
   Future<List<Map<String, dynamic>>> fetchAllScans() async {
