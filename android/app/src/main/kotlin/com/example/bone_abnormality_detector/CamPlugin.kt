@@ -211,15 +211,39 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         val outH = originalBitmap.height
         val scaledCam = Bitmap.createScaledBitmap(camBitmap, outW, outH, true)
 
-        // 3. 50/50 blend with the original
+        // 3. Activation-proportional alpha blend.
+        //    Alpha = bilinear-upsampled CAM value × maxAlpha, so low-activation
+        //    pixels stay transparent (no blue tint) and high-activation pixels
+        //    receive up to 75 % heatmap colour on top of the original.
+        val maxAlpha = 0.75f
         val blended = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
         for (y in 0 until outH) {
             for (x in 0 until outW) {
+                // Bilinear-interpolate the raw CAM activation at this pixel.
+                val fx = x.toFloat() / outW * featW
+                val fy = y.toFloat() / outH * featH
+                val x0 = fx.toInt().coerceIn(0, featW - 1)
+                val y0 = fy.toInt().coerceIn(0, featH - 1)
+                val x1 = (x0 + 1).coerceIn(0, featW - 1)
+                val y1 = (y0 + 1).coerceIn(0, featH - 1)
+                val dx = fx - x0; val dy = fy - y0
+                val camRaw = camGrid[y0][x0] * (1 - dx) * (1 - dy) +
+                             camGrid[y0][x1] * dx        * (1 - dy) +
+                             camGrid[y1][x0] * (1 - dx) * dy        +
+                             camGrid[y1][x1] * dx        * dy
+                val alpha = (camRaw / range).coerceIn(0f, 1f) * maxAlpha
+
                 val op = originalBitmap.getPixel(x, y)
                 val hp = scaledCam.getPixel(x, y)
-                val r = (((op shr 16) and 0xFF) * 0.5f + ((hp shr 16) and 0xFF) * 0.5f).toInt()
-                val g = (((op shr  8) and 0xFF) * 0.5f + ((hp shr  8) and 0xFF) * 0.5f).toInt()
-                val b = (( op         and 0xFF) * 0.5f + ( hp         and 0xFF) * 0.5f).toInt()
+                val or2 = (op shr 16) and 0xFF
+                val og  = (op shr  8) and 0xFF
+                val ob  =  op         and 0xFF
+                val hr  = (hp shr 16) and 0xFF
+                val hg  = (hp shr  8) and 0xFF
+                val hb  =  hp         and 0xFF
+                val r = (or2 * (1f - alpha) + hr * alpha).toInt().coerceIn(0, 255)
+                val g = (og  * (1f - alpha) + hg * alpha).toInt().coerceIn(0, 255)
+                val b = (ob  * (1f - alpha) + hb * alpha).toInt().coerceIn(0, 255)
                 blended.setPixel(x, y, (0xFF shl 24) or (r shl 16) or (g shl 8) or b)
             }
         }

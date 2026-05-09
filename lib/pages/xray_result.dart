@@ -15,6 +15,8 @@ import '../widgets/preset_picker_sheet.dart';
 import '../pages/add_patient.dart';
 import '../services/pdf_export_service.dart';
 import '../main.dart' show routeObserver;
+import '../utils/bone_thresholds.dart';
+import '../widgets/how_to_read_dialog.dart';
 import 'package:printing/printing.dart';
 
 class XrayResultPage extends StatefulWidget {
@@ -563,33 +565,53 @@ class _XrayResultPageState extends State<XrayResultPage> with RouteAware {
 
   Widget _buildTextResult() {
     final result = _result!;
-    final isAbnormal = result.hasAbnormality;
-    final label = isAbnormal ? 'ABNORMALITY DETECTED' : 'NO ABNORMALITY DETECTED';
-    final confidenceText =
-        '${(result.abnormalityConfidence * 100).toStringAsFixed(1)}% Abnormality Confidence';
+    final pct = result.abnormalityConfidence * 100;
     final topPrediction =
         result.topPredictions.isNotEmpty ? result.topPredictions.first : null;
+
+    final threshold = thresholdFor(topPrediction?.bonePart);
+    final thresholdStr = threshold != null
+        ? ' (threshold: ${(threshold * 100).toStringAsFixed(1)}%)'
+        : '';
+    final tierText = result.hasAbnormality
+        ? 'Signs of abnormality detected$thresholdStr.'
+        : 'No signs of abnormality detected$thresholdStr.';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Center(
           child: Text(
-            label,
+            '${pct.toStringAsFixed(1)}% Likelihood of Abnormality',
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
-              color: isAbnormal ? Colors.red : primaryBlue,
+              color: result.hasAbnormality ? Colors.red : primaryBlue,
               fontWeight: FontWeight.w500,
               fontSize: 22,
-              letterSpacing: 1.2,
+              letterSpacing: 0.5,
             ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Center(
           child: Text(
-            confidenceText,
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+            tierText,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(fontSize: 13, color: Colors.black54),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: GestureDetector(
+            onTap: () => showHowToReadDialog(context),
+            child: Text(
+              'How to read?',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: primaryBlue,
+                decoration: TextDecoration.underline,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 24),
