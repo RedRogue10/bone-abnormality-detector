@@ -15,6 +15,7 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
+import kotlin.math.sqrt
 
 
 class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
@@ -157,12 +158,35 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             { y, x, c -> f[y][x][c] }
         }
 
-        // Standard CAM: the model already baked in fc_weights × feature_map,
-        // producing cam_all [1, H, W, K]. Extract class 1 (abnormal) directly.
-        val abnormalIdx = if (featC > 1) 1 else 0
-        Log.d(TAG, "Extracting standard CAM for class index $abnormalIdx (abnormal) from cam_all [H=$featH W=$featW K=$featC]")
+        // Eigen-CAM: power iteration to find the dominant activation direction
+        // across the feature channels, then project each spatial position onto it.
+        val rows = featH * featW
+        var v = FloatArray(featC) { 1f / sqrt(featC.toFloat()) }
+        repeat(10) {
+            val mv = FloatArray(rows) { r ->
+                val y = r / featW; val x = r % featW
+                var s = 0f
+                for (c in 0 until featC) s += feat(y, x, c) * v[c]
+                s
+            }
+            val vNew = FloatArray(featC) { c ->
+                var s = 0f
+                for (r in 0 until rows) {
+                    val y = r / featW; val x = r % featW
+                    s += feat(y, x, c) * mv[r]
+                }
+                s
+            }
+            val norm = sqrt(vNew.fold(0f) { acc, f -> acc + f * f })
+            v = if (norm < 1e-8f) vNew else FloatArray(featC) { vNew[it] / norm }
+        }
+
         val camGrid = Array(featH) { y ->
-            FloatArray(featW) { x -> feat(y, x, abnormalIdx) }
+            FloatArray(featW) { x ->
+                var s = 0f
+                for (c in 0 until featC) s += feat(y, x, c) * v[c]
+                s
+            }
         }
 
         // Clamp negatives and normalise to [0, 1]
@@ -225,7 +249,7 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
 
         val baos = ByteArrayOutputStream()
         blended.compress(Bitmap.CompressFormat.PNG, 100, baos)
-        Log.d(TAG, "Standard CAM overlay generated: ${baos.size()} bytes")
+        Log.d(TAG, "Eigen-CAM overlay generated: ${baos.size()} bytes")
         return baos.toByteArray()
     }
 
