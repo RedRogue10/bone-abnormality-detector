@@ -8,7 +8,7 @@ const Map<String, double> boneConfidenceThresholds =  {
     'FINGER':   0.0300,
     'HAND':     0.0250,
     'SHOULDER': 0.2268,
-}
-/// Returns the threshold for [bonePart] (lowercase key), or null if unknown.
+};
+/// Returns the threshold for [bonePart] (case-insensitive), or null if unknown.
 double? thresholdFor(String? bonePart) =>
-    bonePart == null ? null : boneConfidenceThresholds[bonePart.toLowerCase()];
+    bonePart == null ? null : boneConfidenceThresholds[bonePart.toUpperCase()];

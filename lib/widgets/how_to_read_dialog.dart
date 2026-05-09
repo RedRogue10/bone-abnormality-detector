@@ -147,7 +147,7 @@ Widget _thresholdTable() {
         ...sorted.map(
           (e) => TableRow(
             children: [
-              _cell(e.key[0].toUpperCase() + e.key.substring(1)),
+              _cell(e.key[0].toUpperCase() + e.key.substring(1).toLowerCase()),
               _cell('${(e.value * 100).toStringAsFixed(1)}%'),
             ],
           ),
