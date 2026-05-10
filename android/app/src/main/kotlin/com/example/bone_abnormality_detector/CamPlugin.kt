@@ -15,7 +15,6 @@ import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
-import kotlin.math.sqrt
 
 
 class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
@@ -158,38 +157,13 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
             { y, x, c -> f[y][x][c] }
         }
 
-        // Eigen-CAM: power iteration to find the dominant activation direction
-        // across the feature channels, then project each spatial position onto it.
-        val rows = featH * featW
-        var v = FloatArray(featC) { 1f / sqrt(featC.toFloat()) }
-        repeat(10) {
-            val mv = FloatArray(rows) { r ->
-                val y = r / featW; val x = r % featW
-                var s = 0f
-                for (c in 0 until featC) s += feat(y, x, c) * v[c]
-                s
-            }
-            val vNew = FloatArray(featC) { c ->
-                var s = 0f
-                for (r in 0 until rows) {
-                    val y = r / featW; val x = r % featW
-                    s += feat(y, x, c) * mv[r]
-                }
-                s
-            }
-            val norm = sqrt(vNew.fold(0f) { acc, f -> acc + f * f })
-            v = if (norm < 1e-8f) vNew else FloatArray(featC) { vNew[it] / norm }
-        }
-
+        // Standard CAM: always show the abnormal class (index 1) map.
+        Log.d(TAG, "Standard CAM for abnormal class (index 1) from cam_all [H=$featH W=$featW K=$featC]")
         val camGrid = Array(featH) { y ->
-            FloatArray(featW) { x ->
-                var s = 0f
-                for (c in 0 until featC) s += feat(y, x, c) * v[c]
-                s
-            }
+            FloatArray(featW) { x -> feat(y, x, 1) }
         }
 
-        // Clamp negatives and normalise to [0, 1]
+        // ReLU + normalise to [0, 1]
         for (row in camGrid) for (i in row.indices) if (row[i] < 0f) row[i] = 0f
         var maxV = -Float.MAX_VALUE
         for (row in camGrid) for (v2 in row) if (v2 > maxV) maxV = v2
@@ -210,46 +184,22 @@ class CamPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
         val outH = originalBitmap.height
         val scaledCam = Bitmap.createScaledBitmap(camBitmap, outW, outH, true)
 
-        // 3. Activation-proportional alpha blend.
-        //    Alpha = bilinear-upsampled CAM value × maxAlpha, so low-activation
-        //    pixels stay transparent (no blue tint) and high-activation pixels
-        //    receive up to 75 % heatmap colour on top of the original.
-        val maxAlpha = 0.75f
+        // 3. Flat 60/40 blend — matches the Python visualisation (addWeighted 0.6/0.4)
         val blended = Bitmap.createBitmap(outW, outH, Bitmap.Config.ARGB_8888)
         for (y in 0 until outH) {
             for (x in 0 until outW) {
-                // Bilinear-interpolate the raw CAM activation at this pixel.
-                val fx = x.toFloat() / outW * featW
-                val fy = y.toFloat() / outH * featH
-                val x0 = fx.toInt().coerceIn(0, featW - 1)
-                val y0 = fy.toInt().coerceIn(0, featH - 1)
-                val x1 = (x0 + 1).coerceIn(0, featW - 1)
-                val y1 = (y0 + 1).coerceIn(0, featH - 1)
-                val dx = fx - x0; val dy = fy - y0
-                val camRaw = camGrid[y0][x0] * (1 - dx) * (1 - dy) +
-                             camGrid[y0][x1] * dx        * (1 - dy) +
-                             camGrid[y1][x0] * (1 - dx) * dy        +
-                             camGrid[y1][x1] * dx        * dy
-                val alpha = (camRaw / range).coerceIn(0f, 1f) * maxAlpha
-
                 val op = originalBitmap.getPixel(x, y)
                 val hp = scaledCam.getPixel(x, y)
-                val or2 = (op shr 16) and 0xFF
-                val og  = (op shr  8) and 0xFF
-                val ob  =  op         and 0xFF
-                val hr  = (hp shr 16) and 0xFF
-                val hg  = (hp shr  8) and 0xFF
-                val hb  =  hp         and 0xFF
-                val r = (or2 * (1f - alpha) + hr * alpha).toInt().coerceIn(0, 255)
-                val g = (og  * (1f - alpha) + hg * alpha).toInt().coerceIn(0, 255)
-                val b = (ob  * (1f - alpha) + hb * alpha).toInt().coerceIn(0, 255)
+                val r = (((op shr 16) and 0xFF) * 0.6f + ((hp shr 16) and 0xFF) * 0.4f).toInt().coerceIn(0, 255)
+                val g = (((op shr  8) and 0xFF) * 0.6f + ((hp shr  8) and 0xFF) * 0.4f).toInt().coerceIn(0, 255)
+                val b = (( op         and 0xFF) * 0.6f + ( hp         and 0xFF) * 0.4f).toInt().coerceIn(0, 255)
                 blended.setPixel(x, y, (0xFF shl 24) or (r shl 16) or (g shl 8) or b)
             }
         }
 
         val baos = ByteArrayOutputStream()
         blended.compress(Bitmap.CompressFormat.PNG, 100, baos)
-        Log.d(TAG, "Eigen-CAM overlay generated: ${baos.size()} bytes")
+        Log.d(TAG, "Standard CAM overlay generated: ${baos.size()} bytes")
         return baos.toByteArray()
     }
 
