@@ -107,7 +107,7 @@ class PdfExportService {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                'BONE ABNORMALITY DETECTOR',
+                'XR-AID',
                 style: pw.TextStyle(
                   fontSize: 13,
                   fontWeight: pw.FontWeight.bold,
