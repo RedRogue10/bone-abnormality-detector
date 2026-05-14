@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'login.dart';
-import 'signup.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -38,20 +37,10 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'X-RAY',
+                    'XR-aid',
                     style: GoogleFonts.oswald(
                       color: white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'READER',
-                    style: GoogleFonts.oswald(
-                      color: white,
-                      fontSize: 18,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 4,
                     ),
@@ -63,12 +52,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
               // Login button
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
-                  );
-                },
+                onTap: () => context.go('/login'),
                 child: Container(
                   width: double.infinity,
                   height: 52,
@@ -99,14 +83,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 width: double.infinity,
                 height: 52,
                 child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SignupPage(),
-                      ),
-                    );
-                  },
+                  onPressed: () => context.go('/signup'),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: white, width: 1.5),
                     shape: RoundedRectangleBorder(

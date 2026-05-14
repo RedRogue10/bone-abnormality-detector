@@ -10,6 +10,8 @@ import 'package:go_router/go_router.dart';
 import 'pages/dashboard.dart';
 import 'pages/camera_capture.dart';
 import 'pages/login.dart';
+import 'pages/signup.dart';
+import 'pages/splash_screen.dart';
 import 'web/patient_web_view.dart';
 
 import 'services/database_service.dart';
@@ -24,37 +26,41 @@ final RouteObserver<ModalRoute<void>> routeObserver =
 
 final GoRouter _router = GoRouter(
   observers: [routeObserver],
-  initialLocation: '/login',
+  initialLocation: '/splash',
 
   redirect: (context, state) {
     final loggedIn = FirebaseAuth.instance.currentUser != null;
     final path = state.uri.path;
     print("REDIRECTIONS: Target is ${state.uri.path}");
-    if (path == '/') return '/login';
-    // 1. ALWAYS allow the public route first, no matter what
-    if (path == '/view-results') {
+
+    // Always allow public/auth routes
+    if (path == '/view-results' || path == '/splash' ||
+        path == '/login' || path == '/signup') {
+      // If already logged in, bypass auth screens straight to dashboard
+      if (loggedIn && (path == '/splash' || path == '/login' || path == '/signup')) {
+        return '/dashboard';
+      }
       return null;
     }
 
-    final isLoggingIn = path == '/login';
+    if (path == '/') return '/splash';
 
-    if (!loggedIn && !isLoggingIn) {
-      // Not logged in and trying to access dashboard --> Go to login.
-      return '/login';
-    }
-
-    if (loggedIn && isLoggingIn) {
-      return '/dashboard';
-    }
+    if (!loggedIn) return '/splash';
 
     return null;
   },
 
   routes: [
-    GoRoute(path: '/', redirect: (_, _) => '/login'),
+    GoRoute(path: '/', redirect: (_, _) => '/splash'),
+
+    // Splash / landing
+    GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
 
     // Login
     GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
+
+    // Sign Up
+    GoRoute(path: '/signup', builder: (context, state) => const SignupPage()),
 
     // Dashboard
     GoRoute(
@@ -97,6 +103,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
+      debugShowCheckedModeBanner:false,
       title: 'XR-aid',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A73E9)),

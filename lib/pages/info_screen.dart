@@ -69,17 +69,17 @@ class InfoScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'X-RAY READER',
+                        'XR-aid',
                         style: GoogleFonts.oswald(
                           color: Colors.white,
-                          fontSize: 17,
+                          fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
+                          letterSpacing: 2,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Bone Abnormality Detector',
+                        'AI Radiology Assistant',
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.65),
                           fontSize: 13,

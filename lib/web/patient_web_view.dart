@@ -177,7 +177,7 @@ class _PatientWebViewState extends State<PatientWebView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'X-Ray Reader',
+                  'XR-aid',
                   style: TextStyle(
                     fontFamily: 'Georgia',
                     fontSize: 18,
@@ -187,7 +187,7 @@ class _PatientWebViewState extends State<PatientWebView> {
                 ),
                 SizedBox(height: 2),
                 Text(
-                  'Bone Abnormality Detector',
+                  'AI Radiology Assistant',
                   style: TextStyle(
                     fontSize: 11,
                     color: Color(0x99FFFFFF),
@@ -567,7 +567,7 @@ class _PatientWebViewState extends State<PatientWebView> {
             Icon(Icons.verified_user, size: 16, color: Color(0xFF2E7D32)),
             SizedBox(width: 8),
             Text(
-              'Verified & Secured by Bone X-Ray Reader',
+              'Verified & Secured by XR-aid',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
