@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 import '../models/bone_prediction.dart';
 import '../models/scan_result.dart';
+import '../utils/bone_thresholds.dart';
 import 'cam_processor.dart';
 
 // Must match the output label order of the bone-part classifier.
@@ -86,10 +87,14 @@ class ModelProcessor {
     final classIndex = (top['classIndex'] as num).toInt();
     final confidence = (top['confidence'] as num).toDouble();
 
-    // Always store P(abnormal): if class 0 (normal) won, abnormality probability = 1 - P(normal)
+    // P(abnormal): if argmax was class 0, abnormality prob = 1 - P(normal)
+    final abnormalProb = classIndex == 1 ? confidence : 1.0 - confidence;
+
+    // Use per-bone F1-optimal threshold instead of argmax
+    final threshold = thresholdFor(part.name) ?? 0.5;
     return {
-      'hasAbnormality': classIndex == 1,
-      'confidence': classIndex == 1 ? confidence : 1.0 - confidence,
+      'hasAbnormality': abnormalProb >= threshold,
+      'confidence': abnormalProb,
     };
   }
 
